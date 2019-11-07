@@ -1,13 +1,7 @@
-# Push demo for Crazyflie 2.x
+# readme
 
-This repos contains the push demo for Cazyflie 2.x.
-It uses out-of-tree build functionality of the Crazyflie firmware and is implemented using the app entry-point.
+blabla
 
-This demo works with a Crazyflie 2.x with Flow deck and Multiranger deck attached.
-When running, the crazyflie will wait for an object to get close to the top ranging sensor.
-When an oject (ie. an hand) has passed close to the top sensor, the Crazyflie takes off and hover.
-If anything is detected on side sensors, the Crazyflie moves in the oposite direction.
-So, it is possible to push the Crazyflie around.
 
 ## Build
 
