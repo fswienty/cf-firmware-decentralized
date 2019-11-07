@@ -17,6 +17,8 @@ tags
 /tag.*
 *.gch
 
+/crazyflie-firmware
+
 /generated-test/**
 **/__pycache__/**
 
