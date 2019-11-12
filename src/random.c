@@ -51,11 +51,13 @@ static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, fl
 void appMain()
 {
   static setpoint_t setpoint;
+  static point_t kalmanPosition;
 
-  vTaskDelay(M2T(500)); // wait x ms, M2T: ms to os ticks
+  vTaskDelay(M2T(3000)); // wait x ms, M2T: ms to os ticks
   resetEstimator();
-  vTaskDelay(M2T(7000));
+  vTaskDelay(M2T(10000));
 
+  estimatorKalmanGetEstimatedPos(&kalmanPosition);
   //uint16_t idUp = logGetVarId("range", "up");
 
   DEBUG_PRINT("Waiting for activation ...\n");
@@ -65,8 +67,13 @@ void appMain()
     vTaskDelay(M2T(10));
     if (1)
     {
-      setHoverSetpoint(&setpoint, 0, 0, 1, 0);
+      setHoverSetpoint(&setpoint, 0, 0, .3, 0);
       commanderSetSetpoint(&setpoint, 3);
     }
   }
+}
+
+void waitForPositionEstimator()
+{
+
 }

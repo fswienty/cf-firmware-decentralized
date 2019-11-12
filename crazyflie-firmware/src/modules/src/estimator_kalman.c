@@ -696,7 +696,9 @@ void estimatorKalmanGetEstimatedRot(float * rotationMatrix) {
 }
 
 void resetEstimator() {
-  coreData.resetEstimation = 1;
+  coreData.resetEstimation = true;
+  vTaskDelay(M2T(100));
+  coreData.resetEstimation = false;
 }
 
 // Temporary development groups
