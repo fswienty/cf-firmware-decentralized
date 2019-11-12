@@ -31,7 +31,7 @@ static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, fl
   //setpoint->velocity_body = true;
 }
 
-typedef enum dik
+typedef enum
 {
   idle,
   lowUnlock,
