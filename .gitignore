@@ -17,7 +17,12 @@ tags
 /tag.*
 *.gch
 
-/crazyflie-firmware
+/crazyflie-firmware/bin
+/crazyflie-firmware/docs
+/crazyflie-firmware/generated-test
+/crazyflie-firmware/test
+/crazyflie-firmware/vendor
+/crazyflie-firmware/tools
 
 /generated-test/**
 **/__pycache__/**

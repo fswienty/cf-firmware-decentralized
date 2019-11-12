@@ -13,6 +13,10 @@
 
 #include "log.h"
 
+// my stuff
+#include "estimator_kalman.h"
+
+
 #define DEBUG_MODULE "PUSH"
 
 static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, float yawrate)
@@ -31,15 +35,15 @@ static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, fl
   //setpoint->velocity_body = true;
 }
 
-typedef enum
-{
-  idle,
-  lowUnlock,
-  unlocked,
-  stopping
-} State;
+// typedef enum
+// {
+//   idle,
+//   lowUnlock,
+//   unlocked,
+//   stopping
+// } State;
 
-static State state = idle;
+// static State state = idle;
 
 // #define MAX(a, b) ((a > b) ? a : b)
 // #define MIN(a, b) ((a < b) ? a : b)
@@ -48,7 +52,9 @@ void appMain()
 {
   static setpoint_t setpoint;
 
-  vTaskDelay(M2T(3000)); // wait 3000 ms, M2T: ms to os ticks
+  vTaskDelay(M2T(500)); // wait x ms, M2T: ms to os ticks
+  resetEstimator();
+  vTaskDelay(M2T(7000));
 
   //uint16_t idUp = logGetVarId("range", "up");
 
