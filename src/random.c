@@ -19,7 +19,7 @@
 
 #define DEBUG_MODULE "PUSH"
 
-static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, float yawrate)
+static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, float yaw)
 {
   setpoint->mode.x = modeAbs;
   setpoint->mode.y = modeAbs;
@@ -29,8 +29,8 @@ static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, fl
   setpoint->position.y = y;
   setpoint->position.z = z;
 
-  setpoint->mode.yaw = modeVelocity;
-  setpoint->attitudeRate.yaw = yawrate;
+  setpoint->mode.yaw = modeAbs;
+  setpoint->attitude.yaw = yaw;
 
   //setpoint->velocity_body = true;
 }
