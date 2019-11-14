@@ -24,15 +24,17 @@ static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, fl
   setpoint->mode.x = modeAbs;
   setpoint->mode.y = modeAbs;
   setpoint->mode.z = modeAbs;
+  setpoint->mode.yaw = modeAbs;
 
   setpoint->position.x = x;
   setpoint->position.y = y;
   setpoint->position.z = z;
-
-  setpoint->mode.yaw = modeAbs;
   setpoint->attitude.yaw = yaw;
+}
 
-  //setpoint->velocity_body = true;
+static void use(float var)
+{
+  ;
 }
 
 // typedef enum
@@ -51,7 +53,8 @@ static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, fl
 void appMain()
 {
   static setpoint_t setpoint;
-  static point_t kalmanPosition;
+  //static point_t kalmanPosition;
+  static int varid;
 
   static float myNumber = 0;
   
@@ -62,22 +65,22 @@ void appMain()
   */
   static int8_t command = 0;
 
-  static float posX;
-  static float posY;
-  static float posZ;
+  static float posX = 0;
+  static float posY = 0;
+  static float posZ = 0;
 
-  vTaskDelay(M2T(500)); // wait x ms, M2T: ms to os ticks
-  resetEstimator();
-  vTaskDelay(M2T(500));
+  // vTaskDelay(M2T(500)); // wait x ms, M2T: ms to os ticks
+  // resetEstimator();
+  // vTaskDelay(M2T(500));
 
-  estimatorKalmanGetEstimatedPos(&kalmanPosition);
+  //estimatorKalmanGetEstimatedPos(&kalmanPosition);
   //uint16_t idUp = logGetVarId("range", "up");
 
   DEBUG_PRINT("Waiting for activation ...\n");
 
-  LOG_GROUP_START(test);
-  LOG_ADD(float, myNumber, &myNumber)
-  LOG_GROUP_STOP(test);
+  LOG_GROUP_START(test)
+  LOG_ADD(LOG_FLOAT, myNumber, &myNumber)
+  LOG_GROUP_STOP(test)
 
   PARAM_GROUP_START(command)
   PARAM_ADD(PARAM_INT8, command, &command)
@@ -110,12 +113,13 @@ void appMain()
       break;
     }
     command = 0;
+    use(posX + posY + posZ);
 
     if (1)
     {
       setHoverSetpoint(&setpoint, 0, 0, .3, 0);
       //commanderSetSetpoint(&setpoint, 3);
-      myNumber += 0.01;
+      myNumber += 0.01f;
     }
   }
 }
