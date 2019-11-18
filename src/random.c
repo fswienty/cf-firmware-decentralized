@@ -34,7 +34,7 @@ static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, fl
 
 static void use(float var)
 {
-  ;
+  return;
 }
 
 // typedef enum
@@ -81,10 +81,12 @@ void appMain()
   LOG_GROUP_START(test)
   LOG_ADD(LOG_FLOAT, myNumber, &myNumber)
   LOG_GROUP_STOP(test)
+  myNumber = 0;
 
   PARAM_GROUP_START(command)
   PARAM_ADD(PARAM_INT8, command, &command)
   PARAM_GROUP_STOP(command)
+  command = 42;
 
   while (1)
   {
@@ -101,25 +103,23 @@ void appMain()
     switch (command)
     {
     case 0:
-      // if the crazyflie should do something when flying normally, put it here
+      myNumber += 0;
       break;
     case 1:
-      // start code
+      myNumber += 1337;
       break;
     case -1:
-      //land code
+      myNumber -= 1337;
       break;
     default:
       break;
     }
-    command = 0;
+    //command = 0;
     use(posX + posY + posZ);
 
     if (1)
     {
       setHoverSetpoint(&setpoint, 0, 0, .3, 0);
-      //commanderSetSetpoint(&setpoint, 3);
-      myNumber += 0.01f;
     }
   }
 }
