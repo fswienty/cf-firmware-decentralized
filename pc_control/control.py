@@ -26,6 +26,39 @@ def set_command_one(scf):
     cf.param.set_value('command.command', '1')
 
 
+def set_param(scf, param_name, value):
+    cf = scf.cf
+    cf.param.set_value(param_name, value)
+
+
+param_g = 0
+param_name_g = ""
+def get_param(scf, param_name):
+    global param_name_g
+    param_name_g = param_name
+    start_param_printing(scf, param_name)
+    global param_g
+    return param_g
+
+
+def get_param_callback(timestamp, data, logconf):
+    global param_name_g
+    value = data[param_name_g]
+    global param_g
+    param_g = value
+    # return value
+
+
+def start_param_printing(scf, param_name):
+    log_conf = LogConfig(name=param_name, period_in_ms=75)
+    log_conf.add_variable(param_name, 'float')
+    scf.cf.log.add_config(log_conf)
+    log_conf.data_received_cb.add_callback(get_param_callback)
+    log_conf.start()
+    time.sleep(0.1)
+    log_conf.stop()
+
+
 def myNumber_callback(timestamp, data, logconf):
     num = data['test.myNumber']
     print('myNumber = {}'.format(num))
@@ -112,16 +145,23 @@ if __name__ == '__main__':
         print('Waiting for parameters to be downloaded...')
         wait_for_param_download(scf)
 
+        # premium validity checking
         while True:
             inp = input()
-            if inp == "start":
+            inp = inp.split()
+            if inp[0] == "start":
                 start(scf)
-            elif inp == "1":
+            elif inp[0] == "1":
                 set_command_one(scf)
-            elif inp == "-1":
+            elif inp[0] == "-1":
                 set_command_neg_one(scf)
-            elif inp == "quit":
+            elif inp[0] == "quit":
                 break
+            elif inp[0] == "set" and len(inp) == 3:
+                set_param(scf, inp[1], inp[2])
+            elif inp[0] == "get" and len(inp) == 2:
+                value = get_param(scf, inp[1])
+                print(value)
             else:
                 print("invalid command")
 

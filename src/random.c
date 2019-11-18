@@ -64,6 +64,7 @@ void appMain()
   *    -1: land
   */
   static int8_t command = 0;
+  static float rwTest = 0;
 
   static float posX = 0;
   static float posY = 0;
@@ -84,9 +85,17 @@ void appMain()
   myNumber = 0;
 
   PARAM_GROUP_START(command)
-  PARAM_ADD(PARAM_INT8, command, &command)
+  //PARAM_ADD(PARAM_INT8, command, &command)
+  PARAM_ADD(PARAM_FLOAT, command, &myNumber)
   PARAM_GROUP_STOP(command)
   command = 42;
+
+  LOG_GROUP_START(rw)
+  LOG_ADD(LOG_FLOAT, test, &rwTest)
+  LOG_GROUP_STOP(rw)
+  PARAM_GROUP_START(rw)
+  PARAM_ADD(PARAM_FLOAT, test, &rwTest)
+  PARAM_GROUP_STOP(rw)
 
   while (1)
   {
@@ -100,22 +109,22 @@ void appMain()
     varid = logGetVarId("kalman", "stateZ");
     posZ = logGetFloat(varid);
 
-    switch (command)
-    {
-    case 0:
-      myNumber += 0;
-      break;
-    case 1:
-      myNumber += 1337;
-      break;
-    case -1:
-      myNumber -= 1337;
-      break;
-    default:
-      break;
-    }
+    // switch (command)
+    // {
+    // case 0:
+    //   myNumber += 0;
+    //   break;
+    // case 1:
+    //   myNumber += 1337;
+    //   break;
+    // case -1:
+    //   myNumber -= 1337;
+    //   break;
+    // default:
+    //   break;
+    // }
     //command = 0;
-    use(posX + posY + posZ);
+    use(posX + posY + posZ + command + myNumber);
 
     if (1)
     {
