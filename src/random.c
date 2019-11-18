@@ -79,23 +79,24 @@ void appMain()
 
   DEBUG_PRINT("Waiting for activation ...\n");
 
-  LOG_GROUP_START(test)
-  LOG_ADD(LOG_FLOAT, myNumber, &myNumber)
-  LOG_GROUP_STOP(test)
-  myNumber = 0;
-
   PARAM_GROUP_START(command)
   //PARAM_ADD(PARAM_INT8, command, &command)
   PARAM_ADD(PARAM_FLOAT, command, &myNumber)
   PARAM_GROUP_STOP(command)
   command = 42;
 
-  LOG_GROUP_START(rw)
-  LOG_ADD(LOG_FLOAT, test, &rwTest)
-  LOG_GROUP_STOP(rw)
+  LOG_GROUP_START(test)
+  LOG_ADD(LOG_FLOAT, myNumber, &myNumber)
+  LOG_GROUP_STOP(test)
+  myNumber = 0;
+
+
   PARAM_GROUP_START(rw)
   PARAM_ADD(PARAM_FLOAT, test, &rwTest)
   PARAM_GROUP_STOP(rw)
+  LOG_GROUP_START(rw)
+  LOG_ADD(LOG_FLOAT, test, &rwTest)
+  LOG_GROUP_STOP(rw)
 
 
   while (1)
