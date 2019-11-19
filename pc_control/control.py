@@ -12,35 +12,10 @@ from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 
 
-def start(scf):
-    start_myNumber_printing(scf)
+def send_packet(scf):
+    cf = scf.cf
+    cf.param.set_value('command.command', '2')
     print("start")
-
-
-def set_command_neg_one(scf):
-    cf = scf.cf
-    cf.param.set_value('command.command', '-1')
-
-
-def set_command_one(scf):
-    # cr.send_packet((0xff, 0x80, 0x63, 0x01))
-    cf = scf.cf
-    cf.param.set_value('command.command', '1')
-
-
-def myNumber_callback(timestamp, data, logconf):
-    num = data['test.myNumber']
-    print('myNumber = {}'.format(num))
-
-
-def start_myNumber_printing(scf):
-    log_conf = LogConfig(name='myNumber', period_in_ms=75)
-    log_conf.add_variable('test.myNumber', 'float')
-    scf.cf.log.add_config(log_conf)
-    log_conf.data_received_cb.add_callback(myNumber_callback)
-    log_conf.start()
-    time.sleep(0.1)
-    log_conf.stop()
 
 
 uris = {
@@ -64,21 +39,21 @@ if __name__ == '__main__':
         while True:
             inp = input()
             inp = inp.split()
-            if inp[0] == "start":
-                start(scf)
-            elif inp[0] == "1":
-                set_command_one(scf)
-            elif inp[0] == "-1":
-                set_command_neg_one(scf)
-            elif inp[0] == "quit":
-                break
-            elif inp[0] == "set" and len(inp) == 3: # usage: set [group.name] [value]
-                helpers.set_param(scf, inp[1], inp[2])
-            elif inp[0] == "get" and len(inp) == 2: # usage: set [group.name]
-                value = helpers.get_param(scf, inp[1])
-                print(value)
-            else:
-                print("invalid command")
+            try:
+                if inp[0] == "send":
+                    send_packet(scf)
+                elif inp[0] == "quit":
+                    break
+                elif inp[0] == "set" and len(inp) == 3: # usage: set [group.name] [value]
+                    helpers.set_param(scf, inp[1], inp[2])
+                elif inp[0] == "get" and len(inp) == 2: # usage: set [group.name]
+                    value = helpers.get_param(scf, inp[1])
+                    print(value)
+                else:
+                    print("invalid command")
+            except:
+                print("exeption occured")
+
 
     # factory = CachedCfFactory(rw_cache='./cache')
     # with Swarm(uris, factory=factory) as swarm:
