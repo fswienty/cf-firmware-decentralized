@@ -20,7 +20,7 @@ def send_packet(scf):
 
 uris = {
     'radio://0/80/2M/E7E7E7E7E4'
-    #,'radio://0/80/2M/E7E7E7E7E9'
+    #, 'radio://0/80/2M/E7E7E7E7E9'
 }
 
 
@@ -55,21 +55,21 @@ if __name__ == '__main__':
                 print("exeption occured")
 
 
-    # factory = CachedCfFactory(rw_cache='./cache')
-    # with Swarm(uris, factory=factory) as swarm:
-    #     # If the copters are started in their correct positions this is
-    #     # probably not needed. The Kalman filter will have time to converge
-    #     # any way since it takes a while to start them all up and connect. We
-    #     # keep the code here to illustrate how to do it.
-    #     # swarm.parallel(reset_estimator)
+    factory = CachedCfFactory(rw_cache='./cache')
+    with Swarm(uris, factory=factory) as swarm:
+        # If the copters are started in their correct positions this is
+        # probably not needed. The Kalman filter will have time to converge
+        # any way since it takes a while to start them all up and connect. We
+        # keep the code here to illustrate how to do it.
+        # swarm.parallel(reset_estimator)
 
-    #     # The current values of all parameters are downloaded as a part of the
-    #     # connections sequence. Since we have 10 copters this is clogging up
-    #     # communication and we have to wait for it to finish before we start
-    #     # flying.
-    #     print('Waiting for parameters to be downloaded...')
-    #     swarm.parallel(helpers.wait_for_param_download)
-    #     print(swarm._cfs)
+        # The current values of all parameters are downloaded as a part of the
+        # connections sequence. Since we have 10 copters this is clogging up
+        # communication and we have to wait for it to finish before we start
+        # flying.
+        print('Waiting for parameters to be downloaded...')
+        swarm.parallel(helpers.wait_for_param_download)
+        print(swarm._cfs)
 
 
 
