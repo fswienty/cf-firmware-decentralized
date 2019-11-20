@@ -1,3 +1,3 @@
 execute custom code on the crazyflie (test by having it fly a sequence and land)
-communication with pc, like start stop land signals
+use swarm method to do parallel stuff
 send data p2p

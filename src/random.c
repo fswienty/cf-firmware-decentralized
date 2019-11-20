@@ -17,7 +17,7 @@
 // my stuff
 #include "estimator_kalman.h"
 #include "radiolink.h"
-//#include "led"
+#include "led.h"
 
 #define DEBUG_MODULE "PUSH"
 
@@ -79,11 +79,11 @@ void appMain()
 
   DEBUG_PRINT("Waiting for activation ...\n");
 
-  static int8_t command = 0;
-  PARAM_GROUP_START(command)
-  PARAM_ADD(PARAM_INT8, command, &command)
-  PARAM_GROUP_STOP(command)
-  command = 0;
+  static int8_t cmd = 0;
+  PARAM_GROUP_START(cmd)
+  PARAM_ADD(PARAM_INT8, cmd, &cmd)
+  PARAM_GROUP_STOP(cmd)
+  cmd = 0;
 
   static int8_t myNumber = 0;
   LOG_GROUP_START(ro)
@@ -112,11 +112,29 @@ void appMain()
     varid = logGetVarId("kalman", "stateZ");
     posZ = logGetFloat(varid);
 
-    switch (command)
+    switch (cmd)
     {
     case 0:
       break;
+    case 1:
+      ledClearAll();
+      break;
     case 2:
+      ledSetAll();
+      break;
+    case 3:
+      ledSet(LED_BLUE_L, true);
+      break;
+    case 4:
+      ledSet(LED_GREEN_L, true);
+      break;
+    case 5:
+      ledSet(LED_GREEN_R, true);
+      break;
+    case 6:
+      ledSet(LED_RED_L, true);
+      break;
+    case 100:
       memcpy(pk.data, "Hello World", 11);
       radiolinkSendP2PPacketBroadcast(&pk);
       myNumber = sizeof(pk.data);
@@ -124,7 +142,9 @@ void appMain()
     default:
       break;
     }
-    command = 0;
+    cmd = 0;
+
+
     use_float(posX + posY + posZ);
     // use_int(myNumber);
     // use_int(command);
