@@ -1,0 +1,2 @@
+{'radio://0/80/2M/E7E7E7E7E4': ['cmd.cmd', '1'], 'radio://0/80/2M/E7E7E7E7E9': ['cmd.cmd', '1']}
+{'radio://0/80/2M/E7E7E7E7E4': ['cmd.cmd', '1'], 'radio://0/80/2M/E7E7E7E7E9': ['cmd.cmd', '1']}

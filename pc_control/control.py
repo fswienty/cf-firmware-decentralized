@@ -1,3 +1,4 @@
+import sys
 import time
 
 from helperFunctions import HelperFunctions
@@ -14,8 +15,8 @@ from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 
 def send_packet(scf):
     cf = scf.cf
-    cf.param.set_value('command.command', '2')
-    print("start")
+    cf.param.set_value('cmd.cmd', 1)
+    print("send_packet")
 
 
 uris = {
@@ -43,27 +44,65 @@ if __name__ == '__main__':
         # flying.
         print('Waiting for parameters to be downloaded...')
         swarm.parallel(helpers.wait_for_param_download)
-        print(swarm._cfs)
+
+        print(f"Connected crazyflies: {swarm._cfs}")
+        print("###################################")
 
         # premium validity checking
         while True:
             inp = input()
-            inp = inp.split()
-            try:
-                if inp[0] == "send":
-                    send_packet(scf)
-                elif inp[0] == "quit":
-                    break
-                elif inp[0] == "set" and len(inp) == 3: # usage: set [group.name] [value]
-                    helpers.set_param(scf, inp[1], inp[2])
-                elif inp[0] == "get" and len(inp) == 2: # usage: set [group.name]
-                    value = helpers.get_param(scf, inp[1])
-                    print(value)
-                else:
-                    print("invalid command")
-            except:
-                print("exeption occured")
+            args = inp.split()
 
+            if args[0] == "quit":
+                print("Program quit")
+                swarm.close_links()
+                sys.exit(0)
+                
+            # the uri of the crazyflie that should execute some action, or "all"
+            crazyflie = None
+            if args[0] == "all":
+                crazyflie = "all"
+            else:
+                for uri in swarm._cfs.keys():
+                    if uri[-1] is args[0]:
+                        crazyflie = uri
+            if crazyflie is None:
+                print(f"Crazyflie number {args[0]} is not connected. Use a valid number or \"all\" to address all crazyflies.")
+                continue
+
+            # the action that the crazyflie(s) should execute
+            action = args[1]
+
+            # the args_dict contains all remaining arguments, keyed with the appropriate uri(s)
+            args_dict = None
+            if crazyflie == "all":
+                args_dict = swarm._cfs # swarm._cfs conveniently also has the uris of all connected crazyflies as keys
+                for uri in args_dict.keys():
+                    args_dict[uri] = args[2:]
+            else:
+                args_dict = { crazyflie: args[2:] }
+
+            print(args_dict)
+
+            try:
+                if action == "send":
+                    swarm.parallel(send_packet)
+                elif action == "set" and len(args) == 4: # usage: [crazyflie] set [group.name] [value]
+                    # args_dict = {
+                    #     'radio://0/80/2M/E7E7E7E7E4': ['cmd.cmd', '1'],
+                    #     'radio://0/80/2M/E7E7E7E7E9': ['cmd.cmd', '1']
+                    # }
+                    swarm.parallel_safe(helpers.set_param, args_dict=args_dict)
+                    print("set")
+                elif action == "get" and len(args) == 3: # usage: [crazyflie] get [group.name]
+                    swarm.parallel_safe(helpers.get_param, args_dict=args_dict)
+                else:
+                    print("Invalid command")
+            except:
+                print("Exeption occured")
+                print(sys.exc_info()[0])
+        else:
+            print("Program exited due to some unexpected reason")
 
 
 

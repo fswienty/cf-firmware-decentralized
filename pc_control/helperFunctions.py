@@ -29,6 +29,7 @@ class HelperFunctions:
     def get_param_callback(self, timestamp, data, logconf):
         value = data[self.param_name]
         self.param = value
+        print(value)
 
 
 ##### ESTIMATOR RESET AND STARTUP STUFF #####
