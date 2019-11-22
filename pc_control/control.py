@@ -73,19 +73,19 @@ if __name__ == '__main__':
                 for uri in swarm._cfs.keys():
                     args_dict[uri] = args[2:]
 
-
-            print(f"args_dict: {args_dict}")
-            print(f"swarm._cfs: {swarm._cfs}")
+            # print(f"args_dict: {args_dict}")
+            # print(f"swarm._cfs: {swarm._cfs}")
+            
             try:
                 if action == "set" and len(args) == 4: # usage: [crazyflie] set [group.name] [value]
                     if crazyflie == "all":
-                        swarm.parallel(helpers.set_param, args_dict=args_dict)
+                        swarm.parallel_safe(helpers.set_param, args_dict=args_dict)
                     else:
                         helpers.set_param(crazyflie, args[2], args[3])
                         
                 elif action == "get" and len(args) == 3: # usage: [crazyflie] get [group.name]
                     if crazyflie == "all":
-                        swarm.parallel(helpers.get_param, args_dict=args_dict)
+                        swarm.parallel_safe(helpers.get_param, args_dict=args_dict)
                     else:
                         helpers.get_param(crazyflie, args[2])
 
