@@ -54,10 +54,11 @@ if __name__ == '__main__':
             args = inp.split()
 
             if args[0] == "quit":
-                print("Program quit")
                 swarm.close_links()
+                time.sleep(0.2)
+                print("Program quit")
                 sys.exit(0)
-                
+
             # the uri of the crazyflie that should execute some action, or "all"
             crazyflie = None
             if args[0] == "all":
@@ -74,24 +75,17 @@ if __name__ == '__main__':
             action = args[1]
 
             # the args_dict contains all remaining arguments, keyed with the appropriate uri(s)
-            args_dict = None
+            args_dict = {}
             if crazyflie == "all":
-                args_dict = swarm._cfs # swarm._cfs conveniently also has the uris of all connected crazyflies as keys
-                for uri in args_dict.keys():
+                for uri in swarm._cfs.keys():
                     args_dict[uri] = args[2:]
             else:
                 args_dict = { crazyflie: args[2:] }
-
-            print(args_dict)
 
             try:
                 if action == "send":
                     swarm.parallel(send_packet)
                 elif action == "set" and len(args) == 4: # usage: [crazyflie] set [group.name] [value]
-                    # args_dict = {
-                    #     'radio://0/80/2M/E7E7E7E7E4': ['cmd.cmd', '1'],
-                    #     'radio://0/80/2M/E7E7E7E7E9': ['cmd.cmd', '1']
-                    # }
                     swarm.parallel_safe(helpers.set_param, args_dict=args_dict)
                     print("set")
                 elif action == "get" and len(args) == 3: # usage: [crazyflie] get [group.name]
@@ -100,9 +94,8 @@ if __name__ == '__main__':
                     print("Invalid command")
             except:
                 print("Exeption occured")
-                print(sys.exc_info()[0])
         else:
-            print("Program exited due to some unexpected reason")
+            print("While loop was exited due to some unexpected reason")
 
 
 
