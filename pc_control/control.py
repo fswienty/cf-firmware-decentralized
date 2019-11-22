@@ -12,13 +12,6 @@ from cflib.crazyflie.syncLogger import SyncLogger
 from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 
-
-def send_packet(scf):
-    cf = scf.cf
-    cf.param.set_value('cmd.cmd', 1)
-    print("send_packet")
-
-
 uris = {
     'radio://0/80/2M/E7E7E7E7E4',
     'radio://0/80/2M/E7E7E7E7E9'
@@ -36,7 +29,7 @@ if __name__ == '__main__':
         # probably not needed. The Kalman filter will have time to converge
         # any way since it takes a while to start them all up and connect. We
         # keep the code here to illustrate how to do it.
-        # swarm.parallel(reset_estimator)
+        # swarm.parallel(helpers.reset_estimator)
 
         # The current values of all parameters are downloaded as a part of the
         # connections sequence. Since we have 10 copters this is clogging up
@@ -59,14 +52,14 @@ if __name__ == '__main__':
                 print("Program quit")
                 sys.exit(0)
 
-            # the uri of the crazyflie that should execute some action, or "all"
+            # the scf object of the crazyflie that should execute some action, or "all"
             crazyflie = None
             if args[0] == "all":
                 crazyflie = "all"
             else:
                 for uri in swarm._cfs.keys():
                     if uri[-1] is args[0]:
-                        crazyflie = uri
+                        crazyflie = swarm._cfs[uri]
             if crazyflie is None:
                 print(f"Crazyflie number {args[0]} is not connected. Use a valid number or \"all\" to address all crazyflies.")
                 continue
@@ -79,25 +72,23 @@ if __name__ == '__main__':
             if crazyflie == "all":
                 for uri in swarm._cfs.keys():
                     args_dict[uri] = args[2:]
-            # else:
-            #     args_dict = { crazyflie: args[2:] }
 
 
             print(f"args_dict: {args_dict}")
             print(f"swarm._cfs: {swarm._cfs}")
             try:
-                if action == "send":
-                    swarm.parallel(send_packet)
-                elif action == "set" and len(args) == 4: # usage: [crazyflie] set [group.name] [value]
-                    if crazyflie != "all":
-                        helpers.set_param(swarm._cfs[crazyflie], args[2], args[3])
-                    else:
+                if action == "set" and len(args) == 4: # usage: [crazyflie] set [group.name] [value]
+                    if crazyflie == "all":
                         swarm.parallel(helpers.set_param, args_dict=args_dict)
-                elif action == "get" and len(args) == 3: # usage: [crazyflie] get [group.name]
-                    if crazyflie != "all":
-                        helpers.get_param(swarm._cfs[crazyflie], args[2])
                     else:
+                        helpers.set_param(crazyflie, args[2], args[3])
+                        
+                elif action == "get" and len(args) == 3: # usage: [crazyflie] get [group.name]
+                    if crazyflie == "all":
                         swarm.parallel(helpers.get_param, args_dict=args_dict)
+                    else:
+                        helpers.get_param(crazyflie, args[2])
+
                 else:
                     print("Invalid command")
             except:
