@@ -6,8 +6,9 @@ from cflib.crazyflie.syncLogger import SyncLogger
 class HelperFunctions:
 
 ##### PARAMETER GET AND SET METHODS #####
-    param = 0
+    #param = 0
     param_name = ""
+    uri = ""
 
     def set_param(self, scf, param_name, value):
         cf = scf.cf
@@ -16,6 +17,7 @@ class HelperFunctions:
 
     def get_param(self, scf, param_name):
         self.param_name = param_name
+        self.uri = scf._link_uri
         log_conf = LogConfig(name=self.param_name, period_in_ms=75)
         log_conf.add_variable(self.param_name, 'float')
         scf.cf.log.add_config(log_conf)
@@ -23,13 +25,14 @@ class HelperFunctions:
         log_conf.start()
         time.sleep(0.1)
         log_conf.stop()
-        return self.param
+        #return self.param
 
 
     def get_param_callback(self, timestamp, data, logconf):
         value = data[self.param_name]
-        self.param = value
-        print(value)
+        #self.param = value
+        #print(value)
+        print(f"{self.uri}: {data}")
 
 
 ##### ESTIMATOR RESET AND STARTUP STUFF #####
