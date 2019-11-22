@@ -6,34 +6,31 @@ from cflib.crazyflie.syncLogger import SyncLogger
 class HelperFunctions:
 
 ##### PARAMETER GET AND SET METHODS #####
+    # param = 0
+    param_name = ""
+
     def set_param(self, scf, param_name, value):
         cf = scf.cf
         cf.param.set_value(param_name, value)
 
 
     def get_param(self, scf, param_name):
-        getter = self.ParamGetter()
-        getter.get_param(scf, param_name)
+        self.param_name = param_name
+        log_conf = LogConfig(name=self.param_name, period_in_ms=75)
+        log_conf.add_variable(self.param_name, 'float')
+        scf.cf.log.add_config(log_conf)
+        log_conf.data_received_cb.add_callback(self.get_param_callback)
+        log_conf.start()
+        time.sleep(0.1)
+        log_conf.stop()
+        #return self.param        
 
 
-    class ParamGetter:
-        param_name = ""
-        uri = ""
-
-        def get_param(self, scf, param_name):
-            self.param_name = param_name
-            self.uri = scf._link_uri
-            log_conf = LogConfig(name=self.param_name, period_in_ms=75)
-            log_conf.add_variable(self.param_name, 'float')
-            scf.cf.log.add_config(log_conf)
-            log_conf.data_received_cb.add_callback(self.get_param_callback)
-            log_conf.start()
-            time.sleep(0.1)
-            log_conf.stop()
-
-        def get_param_callback(self, timestamp, data, logconf):
-            # value = data[self.param_name]
-            print(f"{self.uri}: {data}")
+    def get_param_callback(self, timestamp, data, logconf):
+        # value = data[self.param_name]
+        # self.param = value
+        print(logconf)
+        print(data)
 
 
 ##### ESTIMATOR RESET AND STARTUP STUFF #####

@@ -79,17 +79,25 @@ if __name__ == '__main__':
             if crazyflie == "all":
                 for uri in swarm._cfs.keys():
                     args_dict[uri] = args[2:]
-            else:
-                args_dict = { crazyflie: args[2:] }
+            # else:
+            #     args_dict = { crazyflie: args[2:] }
 
+
+            print(f"args_dict: {args_dict}")
+            print(f"swarm._cfs: {swarm._cfs}")
             try:
                 if action == "send":
                     swarm.parallel(send_packet)
                 elif action == "set" and len(args) == 4: # usage: [crazyflie] set [group.name] [value]
-                    swarm.parallel_safe(helpers.set_param, args_dict=args_dict)
-                    print("set")
+                    if crazyflie != "all":
+                        helpers.set_param(swarm._cfs[crazyflie], args[2], args[3])
+                    else:
+                        swarm.parallel(helpers.set_param, args_dict=args_dict)
                 elif action == "get" and len(args) == 3: # usage: [crazyflie] get [group.name]
-                    swarm.parallel_safe(helpers.get_param, args_dict=args_dict)
+                    if crazyflie != "all":
+                        helpers.get_param(swarm._cfs[crazyflie], args[2])
+                    else:
+                        swarm.parallel(helpers.get_param, args_dict=args_dict)
                 else:
                     print("Invalid command")
             except:
