@@ -21,6 +21,11 @@
 
 #define DEBUG_MODULE "PUSH"
 
+static uint8_t port = 0;
+static uint8_t size = 0;
+static uint8_t data = 0;
+static uint8_t rssi = 0;
+
 static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, float yaw)
 {
   setpoint->mode.x = modeAbs;
@@ -41,6 +46,14 @@ static void use_float(float var)
 static void use_int(int var)
 {
   return;
+}
+
+void p2pcallbackHandler(P2PPacket *p)
+{
+  port = p->port;
+  size = p->size;
+  data = p->data[0];
+  rssi = p->rssi;
 }
 
 // typedef enum
@@ -64,7 +77,7 @@ void appMain()
 
   static P2PPacket pk;
   pk.port = 0;
-  pk.size = 11;
+  pk.size = 4;
 
   static float posX = 0;
   static float posY = 0;
@@ -83,13 +96,23 @@ void appMain()
   PARAM_GROUP_START(cmd)
   PARAM_ADD(PARAM_INT8, cmd, &cmd)
   PARAM_GROUP_STOP(cmd)
-  cmd = 0;
+
+  static int8_t send = 0;
+  PARAM_GROUP_START(p2p)
+  PARAM_ADD(PARAM_UINT8, send, &send)
+  PARAM_GROUP_STOP(p2p)
+
+  LOG_GROUP_START(p2p)
+  LOG_ADD(LOG_UINT8, port, &port)
+  LOG_ADD(LOG_UINT8, size, &size)
+  LOG_ADD(LOG_UINT8, data, &data)
+  LOG_ADD(LOG_UINT8, rssi, &rssi)
+  LOG_GROUP_STOP(p2p)
 
   static int8_t myNumber = 0;
   LOG_GROUP_START(ro)
   LOG_ADD(LOG_INT8, size, &myNumber)
   LOG_GROUP_STOP(ro)
-  myNumber = 0;
 
   static float rwTest = 0;
   PARAM_GROUP_START(rw)
@@ -99,6 +122,8 @@ void appMain()
   LOG_ADD(LOG_FLOAT, test, &rwTest)
   LOG_GROUP_STOP(rw)
 
+
+  p2pRegisterCB(p2pcallbackHandler);
 
   while (1)
   {
@@ -130,14 +155,16 @@ void appMain()
       break;
     case 5:
       ledSet(LED_GREEN_R, true);
+      float benis = 443.653;
+      rwTest = (float)sizeof(benis);
       break;
     case 6:
       ledSet(LED_RED_L, true);
+      rwTest = (float)sizeof("Hello World");
       break;
     case 100:
-      memcpy(pk.data, "Hello World", 11);
+      memcpy(pk.data, &send, 4);
       radiolinkSendP2PPacketBroadcast(&pk);
-      myNumber = sizeof(pk.data);
       break;
     default:
       break;

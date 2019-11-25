@@ -12,6 +12,14 @@ from cflib.crazyflie.syncLogger import SyncLogger
 from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 
+
+def send(scf, value):
+    cf = scf.cf
+    cf.param.set_value('p2p.send', value)
+    time.sleep(0.5)
+    cf.param.set_value('cmd.cmd', '100')
+
+
 uris = {
     'radio://0/80/2M/E7E7E7E7E4',
     'radio://0/80/2M/E7E7E7E7E9'
@@ -77,7 +85,13 @@ if __name__ == '__main__':
             # print(f"swarm._cfs: {swarm._cfs}")
             
             try:
-                if action == "set" and len(args) == 4: # usage: [crazyflie] set [group.name] [value]
+                if action == "send" and len(args) == 3: # usage: [crazyflie] send [value]
+                    if crazyflie == "all":
+                        swarm.parallel_safe(send, args_dict=args_dict)
+                    else:
+                        send(crazyflie, args[2])
+
+                elif action == "set" and len(args) == 4: # usage: [crazyflie] set [group.name] [value]
                     if crazyflie == "all":
                         swarm.parallel_safe(helpers.set_param, args_dict=args_dict)
                     else:

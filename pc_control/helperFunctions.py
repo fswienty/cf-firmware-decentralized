@@ -24,7 +24,7 @@ class HelperFunctions:
             self.param_name = param_name
             self.uri = scf._link_uri
             log_conf = LogConfig(name=self.param_name, period_in_ms=75)
-            log_conf.add_variable(self.param_name, 'float')
+            log_conf.add_variable(self.param_name)
             scf.cf.log.add_config(log_conf)
             log_conf.data_received_cb.add_callback(self.get_param_callback)
             log_conf.start()
