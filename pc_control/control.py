@@ -17,12 +17,13 @@ def send(scf, value):
     cf = scf.cf
     cf.param.set_value('p2p.send', value)
     time.sleep(0.5)
+    print(f"param_name: {type('cmd.cmd')} {'cmd.cmd'} value: {type('100')} {'100'}")
     cf.param.set_value('cmd.cmd', '100')
 
 
 uris = {
-    'radio://0/80/2M/E7E7E7E7E4',
-    'radio://0/80/2M/E7E7E7E7E9'
+    'radio://0/80/2M/E7E7E7E7E4'
+    #,'radio://0/80/2M/E7E7E7E7E9'
 }
 
 

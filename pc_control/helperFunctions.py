@@ -9,6 +9,7 @@ class HelperFunctions:
     def set_param(self, scf, param_name, value):
         cf = scf.cf
         cf.param.set_value(param_name, value)
+        print(f"param_name: {type(param_name)} {param_name} value: {type(value)} {value}")
 
 
     def get_param(self, scf, param_name):
