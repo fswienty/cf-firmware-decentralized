@@ -26,6 +26,14 @@ static uint8_t size = 0;
 static uint8_t data = 0;
 static uint8_t rssi = 0;
 
+void p2pcallbackHandler(P2PPacket *p)
+{
+  port = p->port;
+  size = p->size;
+  data = p->data[0];
+  rssi = p->rssi;
+}
+
 static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, float yaw)
 {
   setpoint->mode.x = modeAbs;
@@ -48,13 +56,6 @@ static void use_int(int var)
   return;
 }
 
-void p2pcallbackHandler(P2PPacket *p)
-{
-  port = p->port;
-  size = p->size;
-  data = p->data[0];
-  rssi = p->rssi;
-}
 
 // typedef enum
 // {
