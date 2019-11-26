@@ -101,11 +101,10 @@ void appMain()
   PARAM_GROUP_START(p2p)
   PARAM_ADD(PARAM_UINT8, send, &send)
   PARAM_GROUP_STOP(p2p)
-  LOG_GROUP_START(p2p)
-  LOG_ADD(LOG_UINT8, send, &send)
-  LOG_GROUP_STOP(p2p)
+
 
   LOG_GROUP_START(p2p)
+  LOG_ADD(LOG_UINT8, send, &send)
   LOG_ADD(LOG_UINT8, port, &port)
   LOG_ADD(LOG_UINT8, size, &size)
   LOG_ADD(LOG_UINT8, data, &data)
