@@ -26,12 +26,40 @@ static uint8_t size = 0;
 static uint8_t data = 0;
 static uint8_t rssi = 0;
 
+typedef struct _PositionP2P
+{
+  char id;
+  float x;
+  float y;
+  float z;
+} PositionP2P; // size: 4 + 12 bytes
+
+static PositionP2P positionP2PArray[10];
+
 void p2pcallbackHandler(P2PPacket *p)
 {
   port = p->port;
   size = p->size;
   data = p->data[0];
   rssi = p->rssi;
+}
+
+void p2pcallbackHandler2(P2PPacket *p)
+{
+  // put the received positionp2p struct into the array at the position corresponding to the received id
+  // PositionP2P receivedPos = (PositionP2P)p->data;
+  // positionP2PArray[receivedPos.id] = receivedPos;
+}
+
+void init()
+{
+  // put PositionP2P structs with out of bounds values into the positionP2PArray
+  int size = sizeof(positionP2PArray) / sizeof(positionP2PArray[0]);
+  for (int i = 0; i < size; i++)
+  {
+    PositionP2P dummy = {.id = i, .x = 9999, .y = 9999, .z = 9999};
+    positionP2PArray[i] = dummy;
+  }
 }
 
 static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, float yaw)
@@ -56,7 +84,6 @@ static void use_int(int var)
   return;
 }
 
-
 // typedef enum
 // {
 //   idle,
@@ -72,26 +99,12 @@ static void use_int(int var)
 
 void appMain()
 {
-  static setpoint_t setpoint;
-  //static point_t kalmanPosition;
-  static int varid;
-
-  static P2PPacket pk;
-  pk.port = 0;
-  pk.size = 4;
-
-  static float posX = 0;
-  static float posY = 0;
-  static float posZ = 0;
-
-  // vTaskDelay(M2T(500)); // wait x ms, M2T: ms to os ticks
-  // resetEstimator();
-  // vTaskDelay(M2T(500));
-
-  //estimatorKalmanGetEstimatedPos(&kalmanPosition);
-  //uint16_t idUp = logGetVarId("range", "up");
-
-  DEBUG_PRINT("Waiting for activation ...\n");
+  static int8_t id = 0;
+  static int8_t amount = 0;
+  PARAM_GROUP_START(drone)
+  PARAM_ADD(PARAM_UINT8, amount, &amount)
+  PARAM_ADD(PARAM_UINT8, id, &id)
+  PARAM_GROUP_STOP(drone)
 
   static int8_t cmd = 0;
   PARAM_GROUP_START(cmd)
@@ -125,8 +138,32 @@ void appMain()
   LOG_ADD(LOG_FLOAT, test, &rwTest)
   LOG_GROUP_STOP(rw)
 
+  static setpoint_t setpoint;
+  //static point_t kalmanPosition;
+  static int varid;
+
+  static PositionP2P positionP2P;
+
+
+  static P2PPacket pk;
+  pk.port = 0;
+
+
+  static float posX = 0;
+  static float posY = 0;
+  static float posZ = 0;
+
+  // vTaskDelay(M2T(500)); // wait x ms, M2T: ms to os ticks
+  // resetEstimator();
+  // vTaskDelay(M2T(500));
+
+  //estimatorKalmanGetEstimatedPos(&kalmanPosition);
+  //uint16_t idUp = logGetVarId("range", "up");
+
+  DEBUG_PRINT("Waiting for activation ...\n");
 
   p2pRegisterCB(p2pcallbackHandler);
+  init();
 
   while (1)
   {
@@ -153,20 +190,24 @@ void appMain()
     case 3:
       ledSet(LED_BLUE_L, true);
       break;
-    case 4:
-      ledSet(LED_GREEN_L, true);
+    case 4: // INITIALIZE
       break;
     case 5:
       ledSet(LED_GREEN_R, true);
-      float benis = 443.653;
-      rwTest = (float)sizeof(benis);
+      float test = 443.653;
+      rwTest = (float)sizeof(test);
       break;
     case 6:
       ledSet(LED_RED_L, true);
-      rwTest = (float)sizeof("Hello World");
+      rwTest = (float)sizeof(PositionP2P); // 
       break;
     case 100:
       memcpy(pk.data, &send, 4);
+      radiolinkSendP2PPacketBroadcast(&pk);
+      break;
+    case 101:
+      memcpy(&pk.data, &positionP2P, sizeof(PositionP2P));
+      pk.size = sizeof(PositionP2P) + 1;
       radiolinkSendP2PPacketBroadcast(&pk);
       break;
     default:
