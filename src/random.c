@@ -24,6 +24,7 @@
 static uint8_t port = 0;
 static uint8_t size = 0;
 static uint8_t data = 0;
+static uint8_t dataArray[10] = {0,0,0,0,0,0,0,0,0,0};
 static uint8_t rssi = 0;
 
 typedef struct _PositionP2P
@@ -40,7 +41,10 @@ void p2pcallbackHandler(P2PPacket *p)
 {
   port = p->port;
   size = p->size;
-  data = p->data[0];
+  for (int i = 0; i < 10; i++)
+  {
+    dataArray[i] = p->data[i];
+  }
   rssi = p->rssi;
 }
 
@@ -107,8 +111,10 @@ void appMain()
   PARAM_GROUP_STOP(drone)
 
   static int8_t cmd = 0;
+   static int8_t cmdData = 0;
   PARAM_GROUP_START(cmd)
   PARAM_ADD(PARAM_INT8, cmd, &cmd)
+  PARAM_ADD(PARAM_INT8, data, &cmdData)
   PARAM_GROUP_STOP(cmd)
 
   static int8_t send = 0;
@@ -125,24 +131,27 @@ void appMain()
   LOG_ADD(LOG_UINT8, rssi, &rssi)
   LOG_GROUP_STOP(p2p)
 
-  static int8_t myNumber = 0;
-  LOG_GROUP_START(ro)
-  LOG_ADD(LOG_INT8, size, &myNumber)
-  LOG_GROUP_STOP(ro)
 
-  static float rwTest = 0;
-  PARAM_GROUP_START(rw)
-  PARAM_ADD(PARAM_FLOAT, test, &rwTest)
-  PARAM_GROUP_STOP(rw)
-  LOG_GROUP_START(rw)
-  LOG_ADD(LOG_FLOAT, test, &rwTest)
-  LOG_GROUP_STOP(rw)
+  static float dbgflt = 0;
+  static uint8_t dbguint8 = 0;
+  PARAM_GROUP_START(dbg)
+  PARAM_ADD(PARAM_FLOAT, flt, &dbgflt)
+  PARAM_ADD(PARAM_UINT8, uint8, &dbguint8)
+  PARAM_GROUP_STOP(dbg)
+  LOG_GROUP_START(dbg)
+  LOG_ADD(LOG_FLOAT, flt, &dbgflt)
+  PARAM_ADD(LOG_UINT8, uint8, &dbguint8)
+  LOG_GROUP_STOP(dbg)
 
   static setpoint_t setpoint;
   //static point_t kalmanPosition;
   static int varid;
 
   static PositionP2P positionP2P;
+  positionP2P.id = 2;
+  positionP2P.x = 2.5;
+  positionP2P.y = -1;
+  positionP2P.z = 1;
 
 
   static P2PPacket pk;
@@ -177,48 +186,26 @@ void appMain()
     varid = logGetVarId("kalman", "stateZ");
     posZ = logGetFloat(varid);
 
+    memcpy(&dbguint8, &dataArray[cmdData], sizeof(uint8_t));
+
     switch (cmd)
     {
-    case 0:
-      break;
-    case 1:
-      ledClearAll();
-      break;
-    case 2:
-      ledSetAll();
-      break;
-    case 3:
-      ledSet(LED_BLUE_L, true);
-      break;
-    case 4: // INITIALIZE
-      break;
-    case 5:
-      ledSet(LED_GREEN_R, true);
-      float test = 443.653;
-      rwTest = (float)sizeof(test);
-      break;
-    case 6:
-      ledSet(LED_RED_L, true);
-      rwTest = (float)sizeof(PositionP2P); // 
-      break;
-    case 100:
-      memcpy(pk.data, &send, 4);
-      radiolinkSendP2PPacketBroadcast(&pk);
-      break;
-    case 101:
-      memcpy(&pk.data, &positionP2P, sizeof(PositionP2P));
-      pk.size = sizeof(PositionP2P) + 1;
-      radiolinkSendP2PPacketBroadcast(&pk);
-      break;
-    default:
-      break;
+      case 100:
+        memcpy(pk.data, &send, 4);
+        radiolinkSendP2PPacketBroadcast(&pk);
+        break;
+      case 101:
+        memcpy(&pk.data, &positionP2P, sizeof(PositionP2P));
+        pk.size = sizeof(PositionP2P) + 1;
+        radiolinkSendP2PPacketBroadcast(&pk);
+        break;
+      default:
+        break;
     }
     cmd = 0;
 
 
     use_float(posX + posY + posZ);
-    // use_int(myNumber);
-    // use_int(command);
     use_int(4);
 
     if (1)
@@ -231,3 +218,7 @@ void appMain()
 void waitForPositionEstimator()
 {
 }
+
+// ledClearAll();
+// ledSetAll();
+// ledSet(LED_BLUE_L, true);
