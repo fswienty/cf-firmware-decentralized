@@ -34,7 +34,7 @@ typedef struct _PositionP2P
   float z;
 } PositionP2P; // size: 4 + 12 bytes
 
-float floatTest;
+float sentFloat;
 float receivedFloat;
 
 static PositionP2P receivedPositionP2P;
@@ -114,7 +114,7 @@ void appMain()
   PARAM_GROUP_STOP(drone)
 
   static int8_t cmd = 0;
-   static int8_t cmdData = 0;
+  static int8_t cmdData = 0;
   PARAM_GROUP_START(cmd)
   PARAM_ADD(PARAM_INT8, cmd, &cmd)
   PARAM_ADD(PARAM_INT8, data, &cmdData)
@@ -136,15 +136,16 @@ void appMain()
 
 
   static float dbgflt = 0;
-  static uint8_t dbguint8 = 0;
+  static char dbgchr = 0;
   PARAM_GROUP_START(dbg)
   PARAM_ADD(PARAM_FLOAT, flt, &dbgflt)
-  PARAM_ADD(PARAM_UINT8, uint8, &dbguint8)
+  PARAM_ADD(PARAM_UINT8, chr, &dbgchr)
   PARAM_GROUP_STOP(dbg)
   LOG_GROUP_START(dbg)
   LOG_ADD(LOG_FLOAT, flt, &dbgflt)
-  PARAM_ADD(LOG_UINT8, uint8, &dbguint8)
+  PARAM_ADD(LOG_UINT8, chr, &dbgchr)
   LOG_GROUP_STOP(dbg)
+
 
   static setpoint_t setpoint;
   //static point_t kalmanPosition;
@@ -156,7 +157,7 @@ void appMain()
   positionP2P.y = -1;
   positionP2P.z = 1;
 
-  floatTest = 46.52;
+  sentFloat = 46.52;
 
 
   static P2PPacket pk;
@@ -191,10 +192,12 @@ void appMain()
     varid = logGetVarId("kalman", "stateZ");
     posZ = logGetFloat(varid);
 
+    dbgchr = pk.data[cmdData];
+
     switch (cmd)
     {
       case 1:
-        dbguint8 = receivedPositionP2P.id;
+        dbgchr = receivedPositionP2P.id;
       case 2:
         dbgflt = receivedPositionP2P.x;
       case 3:
@@ -209,11 +212,16 @@ void appMain()
         radiolinkSendP2PPacketBroadcast(&pk);
         break;
       case 101:
-        // pk.size = sizeof(PositionP2P);
-        // memcpy(&pk.data, &positionP2P, sizeof(PositionP2P));
-        pk.size = sizeof(float);
-        memcpy(&pk.data, &floatTest, sizeof(float));
+        dbgflt = sizeof(PositionP2P);
+        pk.size = sizeof(PositionP2P);
+        memcpy(pk.data, &positionP2P, sizeof(PositionP2P));
         radiolinkSendP2PPacketBroadcast(&pk);
+        memcpy(&receivedPositionP2P, pk.data, sizeof(PositionP2P));
+      case 102:
+        pk.size = sizeof(float);
+        memcpy(&pk.data, &sentFloat, sizeof(float));
+        radiolinkSendP2PPacketBroadcast(&pk);
+        memcpy(&receivedFloat, &pk.data, sizeof(float));
         break;
       default:
         break;
