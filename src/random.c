@@ -24,7 +24,6 @@
 static uint8_t port = 0;
 static uint8_t size = 0;
 static uint8_t data = 0;
-static uint8_t dataArray[10] = {0,0,0,0,0,0,0,0,0,0};
 static uint8_t rssi = 0;
 
 typedef struct _PositionP2P
@@ -35,36 +34,40 @@ typedef struct _PositionP2P
   float z;
 } PositionP2P; // size: 4 + 12 bytes
 
-static PositionP2P positionP2PArray[10];
+float floatTest;
+float receivedFloat;
 
-void p2pcallbackHandler(P2PPacket *p)
-{
-  port = p->port;
-  size = p->size;
-  for (int i = 0; i < 10; i++)
-  {
-    dataArray[i] = p->data[i];
-  }
-  rssi = p->rssi;
-}
+static PositionP2P receivedPositionP2P;
+
+// void p2pcallbackHandler(P2PPacket *p)
+// {
+//   port = p->port;
+//   size = p->size;
+//   for (int i = 0; i < 10; i++)
+//   {
+//     dataArray[i] = p->data[i];
+//   }
+//   rssi = p->rssi;
+// }
 
 void p2pcallbackHandler2(P2PPacket *p)
 {
   // put the received positionp2p struct into the array at the position corresponding to the received id
-  // PositionP2P receivedPos = (PositionP2P)p->data;
-  // positionP2PArray[receivedPos.id] = receivedPos;
+  //memcpy(&receivedPositionP2P, &(p->data), sizeof(PositionP2P));
+  memcpy(&receivedFloat, &(p->data), sizeof(float));
+  //positionP2PArray[receivedPos.id] = receivedPos;
 }
 
-void init()
-{
-  // put PositionP2P structs with out of bounds values into the positionP2PArray
-  int size = sizeof(positionP2PArray) / sizeof(positionP2PArray[0]);
-  for (int i = 0; i < size; i++)
-  {
-    PositionP2P dummy = {.id = i, .x = 9999, .y = 9999, .z = 9999};
-    positionP2PArray[i] = dummy;
-  }
-}
+// void init()
+// {
+//   // put PositionP2P structs with out of bounds values into the positionP2PArray
+//   int size = sizeof(positionP2PArray) / sizeof(positionP2PArray[0]);
+//   for (int i = 0; i < size; i++)
+//   {
+//     PositionP2P dummy = {.id = i, .x = 9999, .y = 9999, .z = 9999};
+//     positionP2PArray[i] = dummy;
+//   }
+// }
 
 static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, float yaw)
 {
@@ -153,6 +156,8 @@ void appMain()
   positionP2P.y = -1;
   positionP2P.z = 1;
 
+  floatTest = 46.52;
+
 
   static P2PPacket pk;
   pk.port = 0;
@@ -171,8 +176,8 @@ void appMain()
 
   DEBUG_PRINT("Waiting for activation ...\n");
 
-  p2pRegisterCB(p2pcallbackHandler);
-  init();
+  p2pRegisterCB(p2pcallbackHandler2);
+  //init();
 
   while (1)
   {
@@ -186,17 +191,28 @@ void appMain()
     varid = logGetVarId("kalman", "stateZ");
     posZ = logGetFloat(varid);
 
-    memcpy(&dbguint8, &dataArray[cmdData], sizeof(uint8_t));
-
     switch (cmd)
     {
+      case 1:
+        dbguint8 = receivedPositionP2P.id;
+      case 2:
+        dbgflt = receivedPositionP2P.x;
+      case 3:
+        dbgflt = receivedPositionP2P.y;
+      case 4:
+        dbgflt = receivedPositionP2P.z;
+      case 5:
+        dbgflt = receivedFloat;
       case 100:
-        memcpy(pk.data, &send, 4);
+        pk.size = 11;
+        memcpy(pk.data, "Hello World", 11);
         radiolinkSendP2PPacketBroadcast(&pk);
         break;
       case 101:
-        memcpy(&pk.data, &positionP2P, sizeof(PositionP2P));
-        pk.size = sizeof(PositionP2P) + 1;
+        // pk.size = sizeof(PositionP2P);
+        // memcpy(&pk.data, &positionP2P, sizeof(PositionP2P));
+        pk.size = sizeof(float);
+        memcpy(&pk.data, &floatTest, sizeof(float));
         radiolinkSendP2PPacketBroadcast(&pk);
         break;
       default:
