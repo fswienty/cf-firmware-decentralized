@@ -82,15 +82,6 @@ static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, fl
   setpoint->attitude.yaw = yaw;
 }
 
-static void use_float(float var)
-{
-  return;
-}
-static void use_int(int var)
-{
-  return;
-}
-
 // typedef enum
 // {
 //   idle,
@@ -198,25 +189,31 @@ void appMain()
     {
       case 1:
         dbgchr = receivedPositionP2P.id;
+        break;
       case 2:
         dbgflt = receivedPositionP2P.x;
+        break;
       case 3:
         dbgflt = receivedPositionP2P.y;
+        break;
       case 4:
         dbgflt = receivedPositionP2P.z;
+        break;
       case 5:
         dbgflt = receivedFloat;
+        break;
       case 100:
         pk.size = 11;
         memcpy(pk.data, "Hello World", 11);
         radiolinkSendP2PPacketBroadcast(&pk);
         break;
       case 101:
-        dbgflt = sizeof(PositionP2P);
+        // dbgflt = sizeof(PositionP2P);
         pk.size = sizeof(PositionP2P);
         memcpy(pk.data, &positionP2P, sizeof(PositionP2P));
         radiolinkSendP2PPacketBroadcast(&pk);
         memcpy(&receivedPositionP2P, pk.data, sizeof(PositionP2P));
+        break;
       case 102:
         pk.size = sizeof(float);
         memcpy(&pk.data, &sentFloat, sizeof(float));
@@ -227,10 +224,6 @@ void appMain()
         break;
     }
     cmd = 0;
-
-
-    use_float(posX + posY + posZ);
-    use_int(4);
 
     if (1)
     {
