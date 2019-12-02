@@ -50,12 +50,9 @@ static PositionP2P receivedPositionP2P;
 //   rssi = p->rssi;
 // }
 
-void p2pcallbackHandler2(P2PPacket *p)
+void p2pcallbackHandler(P2PPacket *p)
 {
-  // put the received positionp2p struct into the array at the position corresponding to the received id
-  //memcpy(&receivedPositionP2P, &(p->data), sizeof(PositionP2P));
-  memcpy(&receivedFloat, &(p->data), sizeof(float));
-  //positionP2PArray[receivedPos.id] = receivedPos;
+  memcpy(&receivedPositionP2P, p->data, sizeof(PositionP2P));
 }
 
 // void init()
@@ -69,7 +66,7 @@ void p2pcallbackHandler2(P2PPacket *p)
 //   }
 // }
 
-static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, float yaw)
+static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z)
 {
   setpoint->mode.x = modeAbs;
   setpoint->mode.y = modeAbs;
@@ -79,7 +76,7 @@ static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z, fl
   setpoint->position.x = x;
   setpoint->position.y = y;
   setpoint->position.z = z;
-  setpoint->attitude.yaw = yaw;
+  setpoint->attitude.yaw = 0;
 }
 
 // typedef enum
@@ -142,14 +139,7 @@ void appMain()
   //static point_t kalmanPosition;
   static int varid;
 
-  static PositionP2P positionP2P;
-  positionP2P.id = 2;
-  positionP2P.x = 2.5;
-  positionP2P.y = -1;
-  positionP2P.z = 1;
-
-  sentFloat = 46.52;
-
+  static PositionP2P positionP2P = {0, 0, 0, 0}
 
   static P2PPacket pk;
   pk.port = 0;
@@ -168,7 +158,7 @@ void appMain()
 
   DEBUG_PRINT("Waiting for activation ...\n");
 
-  p2pRegisterCB(p2pcallbackHandler2);
+  p2pRegisterCB(p2pcallbackHandler);
   //init();
 
   while (1)
@@ -182,8 +172,6 @@ void appMain()
     posY = logGetFloat(varid);
     varid = logGetVarId("kalman", "stateZ");
     posZ = logGetFloat(varid);
-
-    dbgchr = pk.data[cmdData];
 
     switch (cmd)
     {
@@ -208,17 +196,9 @@ void appMain()
         radiolinkSendP2PPacketBroadcast(&pk);
         break;
       case 101:
-        // dbgflt = sizeof(PositionP2P);
         pk.size = sizeof(PositionP2P);
         memcpy(pk.data, &positionP2P, sizeof(PositionP2P));
         radiolinkSendP2PPacketBroadcast(&pk);
-        memcpy(&receivedPositionP2P, pk.data, sizeof(PositionP2P));
-        break;
-      case 102:
-        pk.size = sizeof(float);
-        memcpy(&pk.data, &sentFloat, sizeof(float));
-        radiolinkSendP2PPacketBroadcast(&pk);
-        memcpy(&receivedFloat, &pk.data, sizeof(float));
         break;
       default:
         break;
@@ -227,7 +207,7 @@ void appMain()
 
     if (1)
     {
-      setHoverSetpoint(&setpoint, 0, 0, .3, 0);
+      setHoverSetpoint(&setpoint, 0, 0, .3);
     }
   }
 }
