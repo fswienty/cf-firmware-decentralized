@@ -1,23 +1,29 @@
 import sys
 import time
 
-from helperFunctions import HelperFunctions
+import helperFunctions as func
 
 # from cflib.drivers.crazyradio import Crazyradio
 import cflib.crtp
-from cflib.crazyflie.log import LogConfig
+# from cflib.crazyflie.log import LogConfig
 from cflib.crazyflie.swarm import CachedCfFactory
 from cflib.crazyflie.swarm import Swarm
-from cflib.crazyflie.syncLogger import SyncLogger
-from cflib.crazyflie import Crazyflie
-from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
+# from cflib.crazyflie.syncLogger import SyncLogger
+# from cflib.crazyflie import Crazyflie
+# from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
+
+
+def init_drone(scf):
+    droneID = (scf.cf.link_uri[-1])
+    func.set_param(scf, 'drone.id', droneID)
+    print(f"Initialized drone nr {droneID}")
 
 
 def send(scf, value):
     cf = scf.cf
     cf.param.set_value('p2p.send', value)
     time.sleep(0.2)
-    #print(f"param_name: {type('cmd.cmd')} {'cmd.cmd'} value: {type('100')} {'100'}")
+    # print(f"param_name: {type('cmd.cmd')} {'cmd.cmd'} value: {type('100')} {'100'}")
     cf.param.set_value('cmd.cmd', '100')
 
 
@@ -28,29 +34,20 @@ uris = {
 
 
 if __name__ == '__main__':
+    print("###################################")
     # logging.basicConfig(level=logging.DEBUG)
     cflib.crtp.init_drivers(enable_debug_driver=False)
-    helpers = HelperFunctions()
 
     factory = CachedCfFactory(rw_cache='./cache')
     with Swarm(uris, factory=factory) as swarm:
-        # If the copters are started in their correct positions this is
-        # probably not needed. The Kalman filter will have time to converge
-        # any way since it takes a while to start them all up and connect. We
-        # keep the code here to illustrate how to do it.
-        # swarm.parallel(helpers.reset_estimator)
+        # swarm.parallel(func.reset_estimator)
 
-        # The current values of all parameters are downloaded as a part of the
-        # connections sequence. Since we have 10 copters this is clogging up
-        # communication and we have to wait for it to finish before we start
-        # flying.
         print('Waiting for parameters to be downloaded...')
-        swarm.parallel(helpers.wait_for_param_download)
-
-        print(f"Connected crazyflies: {swarm._cfs}")
+        swarm.parallel(func.wait_for_param_download)
+        # print(f"Connected crazyflies: {swarm._cfs}")
+        swarm.parallel_safe(init_drone)
         print("###################################")
 
-        # premium validity checking
         while True:
             inp = input()
             args = inp.split()
@@ -70,11 +67,16 @@ if __name__ == '__main__':
                     if uri[-1] is args[0]:
                         crazyflie = swarm._cfs[uri]
             if crazyflie is None:
-                print(f"Crazyflie number {args[0]} is not connected. Use a valid number or \"all\" to address all crazyflies.")
+                print(f"Crazyflie number {args[0]} is not connected. Use a valid number (0-9) or \"all\" to address all crazyflies.")
                 continue
 
             # the action that the crazyflie(s) should execute
-            action = args[1]
+            action = ""
+            try:
+                action = args[1]
+            except:
+                print("Arguments missing")
+                continue
 
             # the args_dict contains all remaining arguments, keyed with the appropriate uri(s)
             args_dict = {}
@@ -84,42 +86,36 @@ if __name__ == '__main__':
 
             # print(f"args_dict: {args_dict}")
             # print(f"swarm._cfs: {swarm._cfs}")
-            
+
             # Execution of commands
             try:
-                if action == "send" and len(args) == 3: # usage: [crazyflie] send [value]
+                if action == "init" and len(args) == 2:  # usage: [crazyflie] init
+                    if crazyflie == "all":
+                        swarm.parallel_safe(init_drone, args_dict=args_dict)
+                    else:
+                        init_drone(crazyflie)
+
+                elif action == "send" and len(args) == 3:  # usage: [crazyflie] send [value]
                     if crazyflie == "all":
                         swarm.parallel_safe(send, args_dict=args_dict)
                     else:
                         send(crazyflie, args[2])
 
-                elif action == "set" and len(args) == 4: # usage: [crazyflie] set [group.name] [value]
+                elif action == "set" and len(args) == 4:  # usage: [crazyflie] set [group.name] [value]
                     if crazyflie == "all":
-                        swarm.parallel_safe(helpers.set_param, args_dict=args_dict)
+                        swarm.parallel_safe(func.set_param, args_dict=args_dict)
                     else:
-                        helpers.set_param(crazyflie, args[2], args[3])
-                        
-                elif action == "get" and len(args) == 3: # usage: [crazyflie] get [group.name]
+                        func.set_param(crazyflie, args[2], args[3])
+
+                elif action == "get" and len(args) == 3:  # usage: [crazyflie] get [group.name]
                     if crazyflie == "all":
-                        swarm.parallel_safe(helpers.get_param, args_dict=args_dict)
+                        swarm.parallel_safe(func.get_param, args_dict=args_dict)
                     else:
-                        helpers.get_param(crazyflie, args[2])
+                        func.get_param(crazyflie, args[2])
 
                 else:
                     print("Invalid command")
             except:
                 print("Exeption occured")
         else:
-            print("While loop was exited due to some unexpected reason")
-
-
-
-
-
-# cr = Crazyradio(devid=0)  # maybe 1, idk
-# cr.set_channel(80)
-# cr.set_data_rate(cr.DR_2MPS)
-# cr.set_address((0xe7, 0xe7, 0xe7, 0xe7, 0xe4))
-# cr.set_ack_enable(True)
-
-
+            print("While loop exited due to some unexpected reason")

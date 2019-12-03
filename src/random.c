@@ -19,52 +19,38 @@
 #include "radiolink.h"
 #include "led.h"
 
-#define DEBUG_MODULE "PUSH"
 
-static uint8_t port = 0;
-static uint8_t size = 0;
-static uint8_t data = 0;
-static uint8_t rssi = 0;
+//#define DEBUG_MODULE "PUSH"
 
-typedef struct _PositionP2P
+typedef struct _DronePosition
 {
-  char id;
+  unsigned char id;
   float x;
   float y;
   float z;
-} PositionP2P; // size: 4 + 12 bytes
+} DronePosition; // size: 4 + 12 bytes
 
-float sentFloat;
-float receivedFloat;
 
-static PositionP2P receivedPositionP2P;
+static DronePosition otherPositions[10];
+static DronePosition receivedPosition;
 
-// void p2pcallbackHandler(P2PPacket *p)
-// {
-//   port = p->port;
-//   size = p->size;
-//   for (int i = 0; i < 10; i++)
-//   {
-//     dataArray[i] = p->data[i];
-//   }
-//   rssi = p->rssi;
-// }
 
 void p2pcallbackHandler(P2PPacket *p)
 {
-  memcpy(&receivedPositionP2P, p->data, sizeof(PositionP2P));
+  memcpy(&receivedPosition, p->data, sizeof(DronePosition));
+  otherPositions[receivedPosition.id] = receivedPosition;
 }
 
-// void init()
-// {
-//   // put PositionP2P structs with out of bounds values into the positionP2PArray
-//   int size = sizeof(positionP2PArray) / sizeof(positionP2PArray[0]);
-//   for (int i = 0; i < size; i++)
-//   {
-//     PositionP2P dummy = {.id = i, .x = 9999, .y = 9999, .z = 9999};
-//     positionP2PArray[i] = dummy;
-//   }
-// }
+void init()
+{
+  // put DronePosition structs with out of bounds values into the otherPositions array
+  int size = sizeof(otherPositions) / sizeof(otherPositions[0]);
+  for (int i = 0; i < size; i++)
+  {
+    DronePosition dummy = {.id = i, .x = 99999, .y = 99999, .z = 99999};
+    otherPositions[i] = dummy;
+  }
+}
 
 static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z)
 {
@@ -94,18 +80,16 @@ static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z)
 
 void appMain()
 {
-  static int8_t id = 0;
-  static int8_t amount = 0;
+  static uint8_t droneID = 0;
+  static uint8_t droneAmount = 0;
   PARAM_GROUP_START(drone)
-  PARAM_ADD(PARAM_UINT8, amount, &amount)
-  PARAM_ADD(PARAM_UINT8, id, &id)
+  PARAM_ADD(PARAM_UINT8, id, &droneID)
+  PARAM_ADD(PARAM_UINT8, amount, &droneAmount)
   PARAM_GROUP_STOP(drone)
 
   static int8_t cmd = 0;
-  static int8_t cmdData = 0;
   PARAM_GROUP_START(cmd)
   PARAM_ADD(PARAM_INT8, cmd, &cmd)
-  PARAM_ADD(PARAM_INT8, data, &cmdData)
   PARAM_GROUP_STOP(cmd)
 
   static int8_t send = 0;
@@ -114,17 +98,8 @@ void appMain()
   PARAM_GROUP_STOP(p2p)
 
 
-  LOG_GROUP_START(p2p)
-  LOG_ADD(LOG_UINT8, send, &send)
-  LOG_ADD(LOG_UINT8, port, &port)
-  LOG_ADD(LOG_UINT8, size, &size)
-  LOG_ADD(LOG_UINT8, data, &data)
-  LOG_ADD(LOG_UINT8, rssi, &rssi)
-  LOG_GROUP_STOP(p2p)
-
-
   static float dbgflt = 0;
-  static char dbgchr = 0;
+  static uint8_t dbgchr = 0;
   PARAM_GROUP_START(dbg)
   PARAM_ADD(PARAM_FLOAT, flt, &dbgflt)
   PARAM_ADD(PARAM_UINT8, chr, &dbgchr)
@@ -136,68 +111,47 @@ void appMain()
 
 
   static setpoint_t setpoint;
-  //static point_t kalmanPosition;
-  static int varid;
+  static point_t kalmanPosition;
 
-  static PositionP2P positionP2P = {0, 0, 0, 0}
+  static DronePosition dronePosition = {9, 43.75, -3.6745, 5.8};
 
   static P2PPacket pk;
   pk.port = 0;
-
-
-  static float posX = 0;
-  static float posY = 0;
-  static float posZ = 0;
 
   // vTaskDelay(M2T(500)); // wait x ms, M2T: ms to os ticks
   // resetEstimator();
   // vTaskDelay(M2T(500));
 
-  //estimatorKalmanGetEstimatedPos(&kalmanPosition);
-  //uint16_t idUp = logGetVarId("range", "up");
 
   DEBUG_PRINT("Waiting for activation ...\n");
 
+  init();
   p2pRegisterCB(p2pcallbackHandler);
-  //init();
-
+  
   while (1)
   {
     vTaskDelay(M2T(10));
 
     // get current position
-    varid = logGetVarId("kalman", "stateX");
-    posX = logGetFloat(varid);
-    varid = logGetVarId("kalman", "stateY");
-    posY = logGetFloat(varid);
-    varid = logGetVarId("kalman", "stateZ");
-    posZ = logGetFloat(varid);
+    estimatorKalmanGetEstimatedPos(&kalmanPosition);
 
     switch (cmd)
     {
       case 1:
-        dbgchr = receivedPositionP2P.id;
+        dbgchr = droneID;
         break;
       case 2:
-        dbgflt = receivedPositionP2P.x;
+        dbgflt = receivedPosition.x;
         break;
       case 3:
-        dbgflt = receivedPositionP2P.y;
+        dbgflt = receivedPosition.y;
         break;
       case 4:
-        dbgflt = receivedPositionP2P.z;
-        break;
-      case 5:
-        dbgflt = receivedFloat;
-        break;
-      case 100:
-        pk.size = 11;
-        memcpy(pk.data, "Hello World", 11);
-        radiolinkSendP2PPacketBroadcast(&pk);
+        dbgflt = receivedPosition.z;
         break;
       case 101:
-        pk.size = sizeof(PositionP2P);
-        memcpy(pk.data, &positionP2P, sizeof(PositionP2P));
+        pk.size = sizeof(DronePosition);
+        memcpy(pk.data, &dronePosition, sizeof(DronePosition));
         radiolinkSendP2PPacketBroadcast(&pk);
         break;
       default:
