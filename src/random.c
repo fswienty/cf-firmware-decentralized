@@ -20,7 +20,16 @@
 #include "led.h"
 
 
-//#define DEBUG_MODULE "PUSH"
+//#define DEBUG_MODULE "PUSH
+
+typedef enum
+{
+  deactivated,
+  starting,
+  landing,
+  flying,
+  avoiding,
+} State;
 
 typedef struct _DronePosition
 {
@@ -30,19 +39,26 @@ typedef struct _DronePosition
   float z;
 } DronePosition; // size: 4 + 12 bytes
 
-
+static State state = deactivated;
+static setpoint_t setpoint;
+static point_t kalmanPosition;
+static DronePosition dronePosition = {.id = 0, .x = 99999, .y = 99999, .z = 99999};
+static P2PPacket pk;
 static DronePosition otherPositions[10];
-static DronePosition receivedPosition;
-
+// static DronePosition receivedPosition;
 
 void p2pcallbackHandler(P2PPacket *p)
 {
+  DronePosition receivedPosition;
   memcpy(&receivedPosition, p->data, sizeof(DronePosition));
   otherPositions[receivedPosition.id] = receivedPosition;
 }
 
-void init()
+void init(uint8_t droneID)
 {
+  dronePosition.id = droneID;
+  pk.port = 0;
+
   // put DronePosition structs with out of bounds values into the otherPositions array
   int size = sizeof(otherPositions) / sizeof(otherPositions[0]);
   for (int i = 0; i < size; i++)
@@ -52,51 +68,44 @@ void init()
   }
 }
 
-static void setHoverSetpoint(setpoint_t *setpoint, float x, float y, float z)
+static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
 {
-  setpoint->mode.x = modeAbs;
-  setpoint->mode.y = modeAbs;
-  setpoint->mode.z = modeAbs;
-  setpoint->mode.yaw = modeAbs;
+  sp->mode.x = modeAbs;
+  sp->mode.y = modeAbs;
+  sp->mode.z = modeAbs;
+  sp->mode.yaw = modeAbs;
 
-  setpoint->position.x = x;
-  setpoint->position.y = y;
-  setpoint->position.z = z;
-  setpoint->attitude.yaw = 0;
+  sp->position.x = x;
+  sp->position.y = y;
+  sp->position.z = z;
+  sp->attitude.yaw = 0;
 }
 
-// typedef enum
-// {
-//   idle,
-//   lowUnlock,
-//   unlocked,
-//   stopping
-// } State;
-
-// static State state = idle;
+static void shutOffEngines(setpoint_t *sp)
+{
+  sp->mode.x = modeDisable;
+  sp->mode.y = modeDisable;
+  sp->mode.z = modeDisable;
+  sp->mode.yaw = modeDisable;
+}
 
 // #define MAX(a, b) ((a > b) ? a : b)
 // #define MIN(a, b) ((a < b) ? a : b)
 
 void appMain()
 {
+  static uint8_t droneInit = 0;
   static uint8_t droneID = 0;
   static uint8_t droneAmount = 0;
+  static int8_t droneCmd = 0;
+  static int8_t droneFly = 0;
   PARAM_GROUP_START(drone)
+  PARAM_ADD(PARAM_UINT8, init, &droneInit)
   PARAM_ADD(PARAM_UINT8, id, &droneID)
   PARAM_ADD(PARAM_UINT8, amount, &droneAmount)
+  PARAM_ADD(PARAM_INT8, cmd, &droneCmd)
+  PARAM_ADD(PARAM_INT8, fly, &droneFly)
   PARAM_GROUP_STOP(drone)
-
-  static int8_t cmd = 0;
-  PARAM_GROUP_START(cmd)
-  PARAM_ADD(PARAM_INT8, cmd, &cmd)
-  PARAM_GROUP_STOP(cmd)
-
-  static int8_t send = 0;
-  PARAM_GROUP_START(p2p)
-  PARAM_ADD(PARAM_UINT8, send, &send)
-  PARAM_GROUP_STOP(p2p)
-
 
   static float dbgflt = 0;
   static uint8_t dbgchr = 0;
@@ -109,15 +118,6 @@ void appMain()
   PARAM_ADD(LOG_UINT8, chr, &dbgchr)
   LOG_GROUP_STOP(dbg)
 
-
-  static setpoint_t setpoint;
-  static point_t kalmanPosition;
-
-  static DronePosition dronePosition = {9, 43.75, -3.6745, 5.8};
-
-  static P2PPacket pk;
-  pk.port = 0;
-
   // vTaskDelay(M2T(500)); // wait x ms, M2T: ms to os ticks
   // resetEstimator();
   // vTaskDelay(M2T(500));
@@ -125,29 +125,37 @@ void appMain()
 
   DEBUG_PRINT("Waiting for activation ...\n");
 
-  init();
   p2pRegisterCB(p2pcallbackHandler);
-  
+
+  bool isInitialized = false;
   while (1)
   {
     vTaskDelay(M2T(10));
 
-    // get current position
-    estimatorKalmanGetEstimatedPos(&kalmanPosition);
+    if (droneInit)
+    {
+      init(droneID);
+      dbgchr = dronePosition.id;
+      isInitialized = true;
+      droneInit = 0;
+    }
 
-    switch (cmd)
+    if (!isInitialized)
+    {
+      continue;
+    }
+
+
+    // put kalman position in this drone's dronePosition struct
+    estimatorKalmanGetEstimatedPos(&kalmanPosition);
+    dronePosition.x = kalmanPosition.x;
+    dronePosition.y = kalmanPosition.y;
+    dronePosition.z = kalmanPosition.z;
+
+    switch (droneCmd)
     {
       case 1:
-        dbgchr = droneID;
-        break;
-      case 2:
-        dbgflt = receivedPosition.x;
-        break;
-      case 3:
-        dbgflt = receivedPosition.y;
-        break;
-      case 4:
-        dbgflt = receivedPosition.z;
+        dbgchr = 42;
         break;
       case 101:
         pk.size = sizeof(DronePosition);
@@ -157,11 +165,22 @@ void appMain()
       default:
         break;
     }
-    cmd = 0;
+    droneCmd = 0;
 
-    if (1)
+    switch (droneFly)
     {
-      setHoverSetpoint(&setpoint, 0, 0, .3);
+      case 0:
+        shutOffEngines(&setpoint);
+        commanderSetSetpoint(&setpoint, 3);
+        break;
+      case 1:
+        setHoverSetpoint(&setpoint, 0, 0, .1);
+        commanderSetSetpoint(&setpoint, 3);
+        break;
+      case 2:
+        setHoverSetpoint(&setpoint, 0, 0, .5);
+        commanderSetSetpoint(&setpoint, 3);
+        break;
     }
   }
 }

@@ -13,9 +13,15 @@ from cflib.crazyflie.swarm import Swarm
 # from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 
 
-def init_drone(scf):
+def init_drone(scf, amount):
     droneID = (scf.cf.link_uri[-1])
     func.set_param(scf, 'drone.id', droneID)
+    time.sleep(0.2)
+    func.set_param(scf, 'drone.amount', amount)
+    time.sleep(0.2)
+    # func.set_param(scf, 'drone.init', 1)
+    # time.sleep(0.2)   
+    func.get_param(scf, 'dbg.chr')
     print(f"Initialized drone nr {droneID}")
 
 
@@ -29,7 +35,7 @@ def send(scf, value):
 
 uris = {
     'radio://0/80/2M/E7E7E7E7E4'
-    ,'radio://0/80/2M/E7E7E7E7E9'
+    #,'radio://0/80/2M/E7E7E7E7E9'
 }
 
 
@@ -40,12 +46,15 @@ if __name__ == '__main__':
 
     factory = CachedCfFactory(rw_cache='./cache')
     with Swarm(uris, factory=factory) as swarm:
-        # swarm.parallel(func.reset_estimator)
+        swarm.parallel(func.reset_estimator)
 
         print('Waiting for parameters to be downloaded...')
         swarm.parallel(func.wait_for_param_download)
         # print(f"Connected crazyflies: {swarm._cfs}")
-        swarm.parallel_safe(init_drone)
+        args_dict = {}
+        for uri in swarm._cfs.keys():
+            args_dict[uri] = [len(uris)]
+        swarm.parallel_safe(init_drone, args_dict=args_dict)
         print("###################################")
 
         while True:
@@ -84,18 +93,9 @@ if __name__ == '__main__':
                 for uri in swarm._cfs.keys():
                     args_dict[uri] = args[2:]
 
-            # print(f"args_dict: {args_dict}")
-            # print(f"swarm._cfs: {swarm._cfs}")
-
             # Execution of commands
             try:
-                if action == "init" and len(args) == 2:  # usage: [crazyflie] init
-                    if crazyflie == "all":
-                        swarm.parallel_safe(init_drone, args_dict=args_dict)
-                    else:
-                        init_drone(crazyflie)
-
-                elif action == "send" and len(args) == 3:  # usage: [crazyflie] send [value]
+                if action == "send" and len(args) == 3:  # usage: [crazyflie] send [value]
                     if crazyflie == "all":
                         swarm.parallel_safe(send, args_dict=args_dict)
                     else:
