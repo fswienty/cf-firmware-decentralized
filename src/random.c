@@ -24,11 +24,12 @@
 
 typedef enum
 {
+  uninitialized,
   deactivated,
   starting,
   landing,
-  flying,
-  avoiding,
+  idling,
+  moving,
 } State;
 
 typedef struct _DronePosition
@@ -39,7 +40,7 @@ typedef struct _DronePosition
   float z;
 } DronePosition; // size: 4 + 12 bytes
 
-static State state = deactivated;
+static State state = uninitialized;
 static setpoint_t setpoint;
 static point_t kalmanPosition;
 static DronePosition dronePosition = {.id = 0, .x = 99999, .y = 99999, .z = 99999};
@@ -79,6 +80,19 @@ static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
   sp->position.y = y;
   sp->position.z = z;
   sp->attitude.yaw = 0;
+}
+
+static void moveVertical(setpoint_t *sp, float zVelocity)
+{
+  sp->mode.x = modeVelocity;
+  sp->mode.y = modeVelocity;
+  sp->mode.z = modeVelocity;
+  sp->mode.yaw = modeAbs;
+
+  sp->velocity.x = 0.0;
+  sp->velocity.y = 0.0;
+  sp->velocity.z = zVelocity;
+  sp->attitudeRate.yaw = 0.0;
 }
 
 static void shutOffEngines(setpoint_t *sp)
@@ -122,12 +136,8 @@ void appMain()
   // resetEstimator();
   // vTaskDelay(M2T(500));
 
-
-  DEBUG_PRINT("Waiting for activation ...\n");
-
   p2pRegisterCB(p2pcallbackHandler);
 
-  bool isInitialized = false;
   while (1)
   {
     vTaskDelay(M2T(10));
@@ -136,11 +146,11 @@ void appMain()
     {
       init(droneID);
       dbgchr = dronePosition.id;
-      isInitialized = true;
+      state = deactivated;
       droneInit = 0;
     }
 
-    if (!isInitialized)
+    if (state == uninitialized)
     {
       continue;
     }
@@ -155,7 +165,10 @@ void appMain()
     switch (droneCmd)
     {
       case 1:
-        dbgchr = 42;
+        state = starting;
+        break;
+      case 2:
+        state = landing;
         break;
       case 101:
         pk.size = sizeof(DronePosition);
@@ -167,21 +180,63 @@ void appMain()
     }
     droneCmd = 0;
 
-    switch (droneFly)
+    DronePosition idlePosition;
+    switch (state)
     {
-      case 0:
+      case uninitialized: // this case should never occur since the drone should have been initialized before this switch
         shutOffEngines(&setpoint);
-        commanderSetSetpoint(&setpoint, 3);
         break;
-      case 1:
-        setHoverSetpoint(&setpoint, 0, 0, .1);
-        commanderSetSetpoint(&setpoint, 3);
+      case deactivated:
+        shutOffEngines(&setpoint);
         break;
-      case 2:
-        setHoverSetpoint(&setpoint, 0, 0, .5);
-        commanderSetSetpoint(&setpoint, 3);
+      case starting:
+        moveVertical(&setpoint, 0.4);
+        if (dronePosition.z > 0.7f)
+        {
+          idlePosition.id = dronePosition.id;
+          idlePosition.x = dronePosition.x;
+          idlePosition.y = dronePosition.y;
+          idlePosition.z = dronePosition.z;
+          state = idling;
+        }
+        break;
+      case landing:
+        moveVertical(&setpoint, -0.4);
+        if (dronePosition.z < 0.15f)
+        {
+          state = deactivated;
+        }
+        break;
+      case idling:
+        setHoverSetpoint(&setpoint, idlePosition.x, idlePosition.y, idlePosition.z);
+        break;
+      case moving:
+        setHoverSetpoint(&setpoint, 0, 0, 0.1);
+        break;
+      default:
+        shutOffEngines(&setpoint);
         break;
     }
+    commanderSetSetpoint(&setpoint, 3);
+
+    // switch (droneFly)
+    // {
+    //   case 0:
+    //     shutOffEngines(&setpoint);
+    //     commanderSetSetpoint(&setpoint, 3);
+    //     state = deactivated;
+    //     break;
+    //   case 1:
+    //     setHoverSetpoint(&setpoint, 0, 0, .1);
+    //     commanderSetSetpoint(&setpoint, 3);
+    //     state = flying;
+    //     break;
+    //   case 2:
+    //     setHoverSetpoint(&setpoint, 0, 0, .5);
+    //     commanderSetSetpoint(&setpoint, 3);
+    //     state = flying;
+    //     break;
+    // }
   }
 }
 

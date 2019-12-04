@@ -19,8 +19,8 @@ def init_drone(scf, amount):
     time.sleep(0.2)
     func.set_param(scf, 'drone.amount', amount)
     time.sleep(0.2)
-    # func.set_param(scf, 'drone.init', 1)
-    # time.sleep(0.2)   
+    func.set_param(scf, 'drone.init', 1)
+    time.sleep(0.2)
     func.get_param(scf, 'dbg.chr')
     print(f"Initialized drone nr {droneID}")
 
