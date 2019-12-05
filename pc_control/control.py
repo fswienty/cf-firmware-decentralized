@@ -25,14 +25,6 @@ def init_drone(scf, amount):
     print(f"Initialized drone nr {droneID}")
 
 
-def send(scf, value):
-    cf = scf.cf
-    cf.param.set_value('p2p.send', value)
-    time.sleep(0.2)
-    # print(f"param_name: {type('cmd.cmd')} {'cmd.cmd'} value: {type('100')} {'100'}")
-    cf.param.set_value('cmd.cmd', '100')
-
-
 uris = {
     'radio://0/80/2M/E7E7E7E7E4'
     #,'radio://0/80/2M/E7E7E7E7E9'
@@ -95,13 +87,7 @@ if __name__ == '__main__':
 
             # Execution of commands
             try:
-                if action == "send" and len(args) == 3:  # usage: [crazyflie] send [value]
-                    if crazyflie == "all":
-                        swarm.parallel_safe(send, args_dict=args_dict)
-                    else:
-                        send(crazyflie, args[2])
-
-                elif action == "set" and len(args) == 4:  # usage: [crazyflie] set [group.name] [value]
+                if action == "set" and len(args) == 4:  # usage: [crazyflie] set [group.name] [value]
                     if crazyflie == "all":
                         swarm.parallel_safe(func.set_param, args_dict=args_dict)
                     else:

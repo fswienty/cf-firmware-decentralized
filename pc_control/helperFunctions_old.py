@@ -3,19 +3,18 @@ import time
 from cflib.crazyflie.log import LogConfig
 from cflib.crazyflie.syncLogger import SyncLogger
 
+
 class HelperFunctions:
 
-##### PARAMETER GET AND SET METHODS #####
+    ##### PARAMETER GET AND SET METHODS #####
     def set_param(self, scf, param_name, value):
         cf = scf.cf
         cf.param.set_value(param_name, value)
-        #print(f"param_name: {type(param_name)} {param_name} value: {type(value)} {value}")
-
+        # print(f"param_name: {type(param_name)} {param_name} value: {type(value)} {value}")
 
     def get_param(self, scf, param_name):
         getter = self.ParamGetter()
         getter.get_param(scf, param_name)
-
 
     class ParamGetter:
         param_name = ""
@@ -36,8 +35,7 @@ class HelperFunctions:
             # value = data[self.param_name]
             print(f"{self.uri}: {data}")
 
-
-##### ESTIMATOR RESET AND STARTUP STUFF #####
+    ##### ESTIMATOR RESET AND STARTUP STUFF #####
     def wait_for_position_estimator(self, scf):
         print('Waiting for estimator to find position...')
 
@@ -78,15 +76,13 @@ class HelperFunctions:
                         max_z - min_z) < threshold:
                     break
 
-
     def reset_estimator(self, scf):
         cf = scf.cf
         cf.param.set_value('kalman.resetEstimation', '1')
         time.sleep(0.1)
         cf.param.set_value('kalman.resetEstimation', '0')
         self.wait_for_position_estimator(cf)
-    
-    
+
     def wait_for_param_download(self, scf):
         while not scf.cf.param.is_updated:
             time.sleep(1.0)
