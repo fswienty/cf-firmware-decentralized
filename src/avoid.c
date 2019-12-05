@@ -184,7 +184,6 @@ void appMain()
     }
     droneCmd = 0;
 
-    DronePosition idlePosition;
     switch (state)
     {
       case uninitialized: // this case should never occur since the drone should have been initialized before the switch statement
