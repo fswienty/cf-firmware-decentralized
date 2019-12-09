@@ -4,6 +4,7 @@ APP_STACKSIZE=300
 
 VPATH += src/
 PROJ_OBJ += avoid.o
+PROJ_OBJ += vector3.o
 
 CRAZYFLIE_BASE=crazyflie-firmware
 include $(CRAZYFLIE_BASE)/Makefile

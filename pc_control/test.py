@@ -17,6 +17,5 @@ uris = {
     'radio://0/80/2M/E7E7E7E7E9'
 }
 
-
 if __name__ == '__main__':
     print(len(uris))

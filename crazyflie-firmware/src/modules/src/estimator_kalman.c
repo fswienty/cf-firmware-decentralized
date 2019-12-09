@@ -695,12 +695,6 @@ void estimatorKalmanGetEstimatedRot(float * rotationMatrix) {
   memcpy(rotationMatrix, coreData.R, 9*sizeof(float));
 }
 
-void resetEstimator() {
-  coreData.resetEstimation = true;
-  vTaskDelay(M2T(100));
-  coreData.resetEstimation = false;
-}
-
 // Temporary development groups
 LOG_GROUP_START(kalman_states)
   LOG_ADD(LOG_FLOAT, ox, &coreData.S[KC_STATE_X])

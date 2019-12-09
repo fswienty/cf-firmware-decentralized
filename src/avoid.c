@@ -19,53 +19,35 @@
 #include "radiolink.h"
 #include "led.h"
 
+#include "vector3.h"
+
 
 //#define DEBUG_MODULE "PUSH
 
 typedef enum
 {
   uninitialized,
-  deactivated,
+  enginesOff,
   starting,
   landing,
   flying,
 } State;
 
-typedef struct _DronePosition
+typedef struct _DroneData
 {
   unsigned char id;
-  float x;
-  float y;
-  float z;
-} DronePosition;  // size: 4 + 12 bytes
+  Vector3 pos;
+} DroneData;  // size: 4 + 12 bytes
 
-static State state = uninitialized;
-static setpoint_t setpoint;
-static point_t kalmanPosition;
-static DronePosition dronePosition;  // this quadcopter's id and position
-static DronePosition targetPosition;  // this quadcopter's target (also id, but it's not needed here)
-static P2PPacket pk;
-static DronePosition otherPositions[10];  // array of the positions and ids of the other quadcopters
+static DroneData droneData;  // this quadcopter's id and position
+static Vector3 targetPosition;  // this quadcopter's target position (also id, but it's not needed here)
+static DroneData othersData[10];  // array of the droneData of the other quadcopters
 
 void p2pcallbackHandler(P2PPacket *p)
 {
-  DronePosition receivedPosition;
-  memcpy(&receivedPosition, p->data, sizeof(DronePosition));
-  otherPositions[receivedPosition.id] = receivedPosition;
-}
-
-static void init(uint8_t droneID)
-{
-  dronePosition.id = droneID;
-  pk.port = 0;
-
-  // put DronePosition structs with out of bounds values into the otherPositions array
-  int size = sizeof(otherPositions) / sizeof(otherPositions[0]);
-  for (int i = 0; i < size; i++)
-  {
-    DronePosition dummy = {.id = i, .x = 99999, .y = 99999, .z = 99999};
-    otherPositions[i] = dummy;
-  }
+  DroneData receivedPosition;
+  memcpy(&receivedPosition, p->data, sizeof(DroneData));
+  othersData[receivedPosition.id] = receivedPosition;
 }
 
 static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
@@ -79,6 +61,16 @@ static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
   sp->position.y = y;
   sp->position.z = z;
   sp->attitude.yaw = 0;
+}
+
+static void setNextWaypoint(setpoint_t *sp)
+{
+  // Vector3 dronePosition = droneData.pos;
+  // Vector3 flup = sub(dronePosition, targetPosition);
+  // flup = norm(flup);
+  // Vector3 blub = add(dronePosition, mul(flup, 0.2f));
+  Vector3 blub = targetPosition;
+  setHoverSetpoint(sp, blub.x, blub.y, blub.z);
 }
 
 static void moveVertical(setpoint_t *sp, float zVelocity)
@@ -107,22 +99,27 @@ static void shutOffEngines(setpoint_t *sp)
 
 void appMain()
 {
+  static point_t kalmanPosition;
+  static setpoint_t setpoint;
+
+  static State state = uninitialized;
+  static P2PPacket pk;
+
   static uint8_t droneID = 0;
   static uint8_t droneAmount = 0;
-  /**
-   *  drone.cmd value meanings:
-   * 
-   *  42: used to trigger initialization
-   *  1:  start
-   *  2:  land
-   * 
-   *  be careful not to use these values for something else
-   */ 
+  // drone.cmd value meanings:
+  // 42: used to trigger initialization
+  // 1:  start
+  // 2:  land
+  // be careful not to use these values for something else 
   static int8_t droneCmd = 0;
   PARAM_GROUP_START(drone)
   PARAM_ADD(PARAM_UINT8, id, &droneID)
   PARAM_ADD(PARAM_UINT8, amount, &droneAmount)
   PARAM_ADD(PARAM_INT8, cmd, &droneCmd)
+  PARAM_ADD(PARAM_FLOAT, targetX, &targetPosition.x)
+  PARAM_ADD(PARAM_FLOAT, targetY, &targetPosition.y)
+  PARAM_ADD(PARAM_FLOAT, targetZ, &targetPosition.z)
   PARAM_GROUP_STOP(drone)
 
   static float dbgflt = 0;
@@ -136,35 +133,52 @@ void appMain()
   PARAM_ADD(LOG_UINT8, chr, &dbgchr)
   LOG_GROUP_STOP(dbg)
 
-  // vTaskDelay(M2T(500)); // wait x ms, M2T: ms to os ticks
-  // resetEstimator();
-  // vTaskDelay(M2T(500));
-
   p2pRegisterCB(p2pcallbackHandler);
 
   while (1)
   {
     vTaskDelay(M2T(10));
 
-    if (droneCmd == 42)
-    {
-      init(droneID);
-      dbgchr = dronePosition.id;
-      state = deactivated;
-      droneCmd = 0;
-    }
+    // if (state == uninitialized && droneCmd == 42)
+    // {
+    //   init(droneID);
+    //   dbgchr = droneData.id;
+    //   state = enginesOff;
+    //   droneCmd = 0;
+    // }
 
+    // don't execute the entire while loop before initialization happend
     if (state == uninitialized)
     {
+      if (droneCmd == 42)
+      {
+        // INIT
+        droneData.id = droneID;
+        pk.port = 0;
+
+        // put DroneData structs with out of bounds values into the othersData array
+        int size = sizeof(othersData) / sizeof(othersData[0]);
+        for (int i = 0; i < size; i++)
+        {
+          DroneData dummy;
+          dummy.id = i;
+          dummy.pos.x = 99999;
+          dummy.pos.y = 99999;
+          dummy.pos.z = 99999;
+          othersData[i] = dummy;
+        }
+        dbgchr = droneData.id;
+        state = enginesOff;
+        droneCmd = 0;
+      }
       continue;
     }
 
-
-    // put kalman position in this drone's dronePosition struct
+    // put kalman position in this drone's droneData struct
     estimatorKalmanGetEstimatedPos(&kalmanPosition);
-    dronePosition.x = kalmanPosition.x;
-    dronePosition.y = kalmanPosition.y;
-    dronePosition.z = kalmanPosition.z;
+    droneData.pos.x = kalmanPosition.x;
+    droneData.pos.y = kalmanPosition.y;
+    droneData.pos.z = kalmanPosition.z;
 
     switch (droneCmd)
     {
@@ -175,9 +189,10 @@ void appMain()
         state = landing;
         break;
       case 101:
-        pk.size = sizeof(DronePosition);
-        memcpy(pk.data, &dronePosition, sizeof(DronePosition));
+        pk.size = sizeof(DroneData);
+        memcpy(pk.data, &droneData, sizeof(DroneData));
         radiolinkSendP2PPacketBroadcast(&pk);
+        dbgchr = pk.size;
         break;
       default:
         break;
@@ -187,57 +202,33 @@ void appMain()
     switch (state)
     {
       case uninitialized: // this case should never occur since the drone should have been initialized before the switch statement
-      case deactivated:
+      case enginesOff:
       default:
         shutOffEngines(&setpoint);
         break;
       case starting:
         moveVertical(&setpoint, 0.4);
-        if (dronePosition.z > 0.7f)
+        if (droneData.pos.z > 0.7f)
         {
-          targetPosition.id = dronePosition.id;
-          targetPosition.x = dronePosition.x;
-          targetPosition.y = dronePosition.y;
-          targetPosition.z = dronePosition.z;
+          targetPosition.x = droneData.pos.x;
+          targetPosition.y = droneData.pos.y;
+          targetPosition.z = droneData.pos.z;
           state = flying;
         }
         break;
       case landing:
         moveVertical(&setpoint, -0.4);
-        if (dronePosition.z < 0.15f)
+        if (droneData.pos.z < 0.15f)
         {
-          state = deactivated;
+          state = enginesOff;
         }
         break;
       case flying:
-        setHoverSetpoint(&setpoint, targetPosition.x, targetPosition.y, targetPosition.z);
+        setNextWaypoint(&setpoint);
         break;
     }
     commanderSetSetpoint(&setpoint, 3);
-
-    // switch (droneFly)
-    // {
-    //   case 0:
-    //     shutOffEngines(&setpoint);
-    //     commanderSetSetpoint(&setpoint, 3);
-    //     state = deactivated;
-    //     break;
-    //   case 1:
-    //     setHoverSetpoint(&setpoint, 0, 0, .1);
-    //     commanderSetSetpoint(&setpoint, 3);
-    //     state = flying;
-    //     break;
-    //   case 2:
-    //     setHoverSetpoint(&setpoint, 0, 0, .5);
-    //     commanderSetSetpoint(&setpoint, 3);
-    //     state = flying;
-    //     break;
-    // }
   }
-}
-
-void waitForPositionEstimator()
-{
 }
 
 // ledClearAll();

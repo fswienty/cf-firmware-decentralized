@@ -84,6 +84,4 @@ void estimatorKalmanGetEstimatedPos(point_t* pos);
  */
 void estimatorKalmanGetEstimatedRot(float * rotationMatrix);
 
-void resetEstimator();
-
 #endif // __ESTIMATOR_KALMAN_H__
