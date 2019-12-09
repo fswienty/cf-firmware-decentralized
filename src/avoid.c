@@ -63,7 +63,7 @@ static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
   sp->attitude.yaw = 0;
 }
 
-static void setNextWaypoint(setpoint_t *sp)
+static void approachTarget(setpoint_t *sp)
 {
   // Vector3 dronePosition = droneData.pos;
   // Vector3 flup = sub(dronePosition, targetPosition);
@@ -224,7 +224,7 @@ void appMain()
         }
         break;
       case flying:
-        setNextWaypoint(&setpoint);
+        approachTarget(&setpoint);
         break;
     }
     commanderSetSetpoint(&setpoint, 3);
