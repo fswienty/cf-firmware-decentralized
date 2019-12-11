@@ -14,20 +14,19 @@ from cflib.crazyflie.swarm import Swarm
 
 
 def init_drone(scf, amount):
-    droneID = (scf.cf.link_uri[-1])
-    func.set_param(scf, 'drone.id', droneID)
-    time.sleep(0.2)
     func.set_param(scf, 'drone.amount', amount)
     time.sleep(0.2)
-    func.set_param(scf, 'drone.cmd', 42)
+    print("almost")
+    droneId = int(scf.cf.link_uri[-1])
+    func.set_param(scf, 'drone.cmd', 100 + droneId)
     time.sleep(0.2)
     func.get_param(scf, 'dbg.chr')
-    print(f"Initialized drone nr {droneID}")
+    print(f"Initialized drone nr {droneId}")
 
 
 uris = {
     'radio://0/80/2M/E7E7E7E7E4'
-    #,'radio://0/80/2M/E7E7E7E7E9'
+    ,'radio://0/80/2M/E7E7E7E7E9'
 }
 
 

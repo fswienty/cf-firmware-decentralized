@@ -45,7 +45,7 @@ static float nominal_height = 0.3;
 //1= wall_following, //2=wall following with avoid, //3=SGBA
 #define METHOD 3
 
-void p2pcallbackHandler(P2PPacket *p);
+void p2pCallbackHandler(P2PPacket *p);
 static uint8_t rssi_inter;
 static uint8_t rssi_inter_filtered;
 static uint8_t rssi_inter_closest;
@@ -175,7 +175,7 @@ void appMain(void *param)
   init_median_filter_f(&medFilt_2, 5);
   static struct MedianFilterFloat medFilt_3;
   init_median_filter_f(&medFilt_3, 13);
-  p2pRegisterCB(p2pcallbackHandler);
+  p2pRegisterCB(p2pCallbackHandler);
   uint64_t address = configblockGetRadioAddress();
   uint8_t my_id = (uint8_t)((address)&0x00000000ff);
   static P2PPacket p_reply;
@@ -465,7 +465,7 @@ void appMain(void *param)
   }
 }
 
-void p2pcallbackHandler(P2PPacket *p)
+void p2pCallbackHandler(P2PPacket *p)
 {
   id_inter_ext = p->data[0];
 

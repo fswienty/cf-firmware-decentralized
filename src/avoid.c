@@ -41,15 +41,16 @@ typedef enum
 
 typedef struct _DroneData
 {
-  unsigned char id;
+  uint8_t id;
   Vector3 pos;
 } DroneData;  // size: 4 + 12 bytes
 
 static DroneData droneData;  // this quadcopter's id and position
-static Vector3 targetPosition;  // this quadcopter's target position (also id, but it's not needed here)
+static Vector3 targetPosition;  // this quadcopter's target position
+static uint8_t previousDroneId;  // the id of the drone that broadcasts its position before this one. compare this to the id in received droneData in the p2pcallback to know when this drone's turn has come.
 static DroneData othersData[OTHERDRONESAMOUNT];  // array of the droneData of the other quadcopters
 
-void p2pcallbackHandler(P2PPacket *p)
+void p2pCallbackHandler(P2PPacket *p)
 {
   DroneData receivedPosition;
   memcpy(&receivedPosition, p->data, sizeof(DroneData));
@@ -131,17 +132,17 @@ void appMain()
   static State state = uninitialized;
   static P2PPacket pk;
 
-  static uint8_t droneID = 0;
   static uint8_t droneAmount = 0;
   // drone.cmd value meanings:
-  // 42: used to trigger initialization
+  // >=100: used to trigger initialization
   // 1:  start
   // 2:  land
   // 3:  debug1
+  // 4:  debug2
   // be careful not to use these values for something else 
   static int8_t droneCmd = 0;
   PARAM_GROUP_START(drone)
-  PARAM_ADD(PARAM_UINT8, id, &droneID)
+  PARAM_ADD(PARAM_UINT8, prevId, &previousDroneId)
   PARAM_ADD(PARAM_UINT8, amount, &droneAmount)
   PARAM_ADD(PARAM_INT8, cmd, &droneCmd)
   PARAM_ADD(PARAM_FLOAT, targetX, &targetPosition.x)
@@ -164,7 +165,7 @@ void appMain()
   PARAM_ADD(LOG_INT32, int, &dbgint)
   LOG_GROUP_STOP(dbg)
 
-  p2pRegisterCB(p2pcallbackHandler);
+  p2pRegisterCB(p2pCallbackHandler);
 
   while (1)
   {
@@ -173,10 +174,11 @@ void appMain()
     // don't execute the entire while loop before initialization happend
     if (state == uninitialized)
     {
-      if (droneCmd == 42)
+      if (droneCmd >= 100)
       {
         // INIT
-        droneData.id = droneID;
+        //droneData.id = droneId;
+        droneData.id = droneCmd - 100;
         pk.port = 0;
 
         // put DroneData structs with out of bounds values into the othersData array
@@ -213,7 +215,10 @@ void appMain()
       case 3:
         state = debug1;
         break;
-      case 101:
+      case 4:
+        state = debug2;
+        break;
+      case 50:
         pk.size = sizeof(DroneData);
         memcpy(pk.data, &droneData, sizeof(DroneData));
         radiolinkSendP2PPacketBroadcast(&pk);
