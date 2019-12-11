@@ -16,7 +16,6 @@ from cflib.crazyflie.swarm import Swarm
 def init_drone(scf, amount):
     func.set_param(scf, 'drone.amount', amount)
     time.sleep(0.2)
-    print("almost")
     droneId = int(scf.cf.link_uri[-1])
     func.set_param(scf, 'drone.cmd', 100 + droneId)
     time.sleep(0.2)
@@ -37,7 +36,7 @@ if __name__ == '__main__':
 
     factory = CachedCfFactory(rw_cache='./cache')
     with Swarm(uris, factory=factory) as swarm:
-        # swarm.parallel(func.reset_estimator)
+        swarm.parallel(func.reset_estimator)
 
         print('Waiting for parameters to be downloaded...')
         swarm.parallel(func.wait_for_param_download)

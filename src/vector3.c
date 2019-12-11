@@ -7,7 +7,11 @@ Vector3 add(Vector3 a, Vector3 b)
     // result.y = a.y + b.y;
     // result.z = a.z + b.z;
     // return result;
-    return (Vector3){a.x + b.x, a.y + b.y, a.z + b.z};
+    return (Vector3){
+        a.x + b.x,
+        a.y + b.y,
+        a.z + b.z
+    };
 }
 
 // The resulting Vector3 points from 'from' to 'to'.
@@ -18,7 +22,11 @@ Vector3 sub(Vector3 from, Vector3 to)
     // result.y = to.y - from.y;
     // result.z = to.z - from.z;
     // return result;
-    return (Vector3){to.x - from.x, to.y - from.y, to.z - from.z};
+    return (Vector3){
+        to.x - from.x,
+        to.y - from.y,
+        to.z - from.z
+    };
 }
 
 Vector3 mul(Vector3 vec3, float f)
@@ -28,7 +36,11 @@ Vector3 mul(Vector3 vec3, float f)
     // result.y = vec3.y * f;
     // result.z = vec3.z * f;
     // return result;
-    return (Vector3){vec3.x * f, vec3.y * f, vec3.z * f};
+    return (Vector3){
+        vec3.x * f,
+        vec3.y * f,
+        vec3.z * f
+    };
 }
 
 float magnitude(Vector3 vec3)
@@ -44,5 +56,9 @@ Vector3 norm(Vector3 vec3)
     // result.y = vec3.y * magInv;
     // result.z = vec3.z * magInv;
     // return result;
-    return (Vector3){vec3.x * magInv, vec3.y * magInv, vec3.z * magInv};
+    return (Vector3){
+        vec3.x * magInv,
+        vec3.y * magInv,
+        vec3.z * magInv
+    };
 }
