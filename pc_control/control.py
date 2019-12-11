@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
     factory = CachedCfFactory(rw_cache='./cache')
     with Swarm(uris, factory=factory) as swarm:
-        swarm.parallel(func.reset_estimator)
+        # swarm.parallel(func.reset_estimator)
 
         print('Waiting for parameters to be downloaded...')
         swarm.parallel(func.wait_for_param_download)

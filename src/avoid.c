@@ -23,6 +23,9 @@
 #define MAX(a, b) ((a > b) ? a : b)
 #define MIN(a, b) ((a < b) ? a : b)
 
+#define OTHERDRONESAMOUNT 10  // size of the array containing the positions of other drones. must be at least as high as the highest id among all drones.
+#define DUMMYPOSITION 99999  // the xyz coordinates of non-connected drones will be set to this value
+
 //#define DEBUG_MODULE "PUSH
 
 typedef enum
@@ -33,6 +36,7 @@ typedef enum
   landing,
   flying,
   debug1,
+  debug2,
 } State;
 
 typedef struct _DroneData
@@ -43,7 +47,7 @@ typedef struct _DroneData
 
 static DroneData droneData;  // this quadcopter's id and position
 static Vector3 targetPosition;  // this quadcopter's target position (also id, but it's not needed here)
-static DroneData othersData[10];  // array of the droneData of the other quadcopters
+static DroneData othersData[OTHERDRONESAMOUNT];  // array of the droneData of the other quadcopters
 
 void p2pcallbackHandler(P2PPacket *p)
 {
@@ -65,9 +69,25 @@ static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
   sp->attitude.yaw = 0;
 }
 
-static void checkDistances()
+static bool checkDistances()
 {
-
+  Vector3 dronePosition = droneData.pos;
+  bool otherIsClose = false;
+  for (int i = 0; i < OTHERDRONESAMOUNT; i++)
+  {
+    Vector3 otherPosition = othersData[i].pos;
+    if (otherPosition.x == DUMMYPOSITION)
+    {
+      continue;
+    }
+    Vector3 droneToOther = sub(dronePosition, otherPosition);
+    float distance = magnitude(droneToOther);
+    if (distance < 0.3f)
+    {
+      otherIsClose = true;
+    }
+  }
+  return otherIsClose;
 }
 
 static void approachTarget(setpoint_t *sp)
@@ -129,15 +149,19 @@ void appMain()
   PARAM_ADD(PARAM_FLOAT, targetZ, &targetPosition.z)
   PARAM_GROUP_STOP(drone)
 
+  // debug variables which can be written and read from the pc and the drone
   static float dbgflt = 0;
   static uint8_t dbgchr = 0;
+  static int dbgint = 0;
   PARAM_GROUP_START(dbg)
   PARAM_ADD(PARAM_FLOAT, flt, &dbgflt)
   PARAM_ADD(PARAM_UINT8, chr, &dbgchr)
+  PARAM_ADD(PARAM_INT32, int, &dbgint)
   PARAM_GROUP_STOP(dbg)
   LOG_GROUP_START(dbg)
   LOG_ADD(LOG_FLOAT, flt, &dbgflt)
   PARAM_ADD(LOG_UINT8, chr, &dbgchr)
+  PARAM_ADD(LOG_INT32, int, &dbgint)
   LOG_GROUP_STOP(dbg)
 
   p2pRegisterCB(p2pcallbackHandler);
@@ -156,14 +180,13 @@ void appMain()
         pk.port = 0;
 
         // put DroneData structs with out of bounds values into the othersData array
-        int size = sizeof(othersData) / sizeof(othersData[0]);
-        for (int i = 0; i < size; i++)
+        for (int i = 0; i < OTHERDRONESAMOUNT; i++)
         {
           DroneData dummy;
           dummy.id = i;
-          dummy.pos.x = 99999;
-          dummy.pos.y = 99999;
-          dummy.pos.z = 99999;
+          dummy.pos.x = DUMMYPOSITION;
+          dummy.pos.y = DUMMYPOSITION;
+          dummy.pos.z = DUMMYPOSITION;
           othersData[i] = dummy;
         }
         dbgchr = droneData.id;
@@ -229,13 +252,27 @@ void appMain()
         approachTarget(&setpoint);
         break;
       case debug1:
-        checkDistances();
+        if (checkDistances())
+        {
+          ledSetAll();
+        }
+        else
+        {
+          ledClearAll();
+        }   
+        break;
+      case debug2:
         break;
     }
     commanderSetSetpoint(&setpoint, 3);
   }
 }
 
+
+// SOME OLD STUFF
+
 // ledClearAll();
 // ledSetAll();
 // ledSet(LED_BLUE_L, true);
+
+//int size = sizeof(array) / sizeof(array[0]);

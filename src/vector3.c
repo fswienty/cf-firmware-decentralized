@@ -1,7 +1,3 @@
-#include <string.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <math.h>
 #include "vector3.h"
 
 Vector3 add(Vector3 a, Vector3 b)

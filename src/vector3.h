@@ -1,3 +1,8 @@
+#include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <math.h>
+
 typedef struct _Vector3
 {
   float x;
