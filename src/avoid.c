@@ -18,9 +18,10 @@
 #include "estimator_kalman.h"
 #include "radiolink.h"
 #include "led.h"
-
 #include "vector3.h"
 
+#define MAX(a, b) ((a > b) ? a : b)
+#define MIN(a, b) ((a < b) ? a : b)
 
 //#define DEBUG_MODULE "PUSH
 
@@ -65,12 +66,14 @@ static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
 
 static void approachTarget(setpoint_t *sp)
 {
-  // Vector3 dronePosition = droneData.pos;
-  // Vector3 flup = sub(dronePosition, targetPosition);
-  // flup = norm(flup);
-  // Vector3 blub = add(dronePosition, mul(flup, 0.2f));
-  Vector3 blub = targetPosition;
-  setHoverSetpoint(sp, blub.x, blub.y, blub.z);
+  Vector3 dronePosition = droneData.pos;
+  Vector3 droneToTarget = sub(dronePosition, targetPosition);
+  float distance = magnitude(droneToTarget);
+  distance = MIN(distance, 0.2f);
+  droneToTarget = norm(droneToTarget);
+  Vector3 waypoint = add(dronePosition, mul(droneToTarget, distance));
+  // Vector3 waypoint = targetPosition;
+  setHoverSetpoint(sp, waypoint.x, waypoint.y, waypoint.z);
 }
 
 static void moveVertical(setpoint_t *sp, float zVelocity)
@@ -94,8 +97,7 @@ static void shutOffEngines(setpoint_t *sp)
   sp->mode.yaw = modeDisable;
 }
 
-// #define MAX(a, b) ((a > b) ? a : b)
-// #define MIN(a, b) ((a < b) ? a : b)
+
 
 void appMain()
 {
