@@ -32,6 +32,7 @@ typedef enum
   starting,
   landing,
   flying,
+  debug1,
 } State;
 
 typedef struct _DroneData
@@ -64,6 +65,11 @@ static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
   sp->attitude.yaw = 0;
 }
 
+static void checkDistances()
+{
+
+}
+
 static void approachTarget(setpoint_t *sp)
 {
   Vector3 dronePosition = droneData.pos;
@@ -72,7 +78,6 @@ static void approachTarget(setpoint_t *sp)
   distance = MIN(distance, 0.2f);
   droneToTarget = norm(droneToTarget);
   Vector3 waypoint = add(dronePosition, mul(droneToTarget, distance));
-  // Vector3 waypoint = targetPosition;
   setHoverSetpoint(sp, waypoint.x, waypoint.y, waypoint.z);
 }
 
@@ -97,8 +102,7 @@ static void shutOffEngines(setpoint_t *sp)
   sp->mode.yaw = modeDisable;
 }
 
-
-
+// ENTRY POINT
 void appMain()
 {
   static point_t kalmanPosition;
@@ -113,6 +117,7 @@ void appMain()
   // 42: used to trigger initialization
   // 1:  start
   // 2:  land
+  // 3:  debug1
   // be careful not to use these values for something else 
   static int8_t droneCmd = 0;
   PARAM_GROUP_START(drone)
@@ -140,14 +145,6 @@ void appMain()
   while (1)
   {
     vTaskDelay(M2T(10));
-
-    // if (state == uninitialized && droneCmd == 42)
-    // {
-    //   init(droneID);
-    //   dbgchr = droneData.id;
-    //   state = enginesOff;
-    //   droneCmd = 0;
-    // }
 
     // don't execute the entire while loop before initialization happend
     if (state == uninitialized)
@@ -190,6 +187,9 @@ void appMain()
       case 2:
         state = landing;
         break;
+      case 3:
+        state = debug1;
+        break;
       case 101:
         pk.size = sizeof(DroneData);
         memcpy(pk.data, &droneData, sizeof(DroneData));
@@ -227,6 +227,9 @@ void appMain()
         break;
       case flying:
         approachTarget(&setpoint);
+        break;
+      case debug1:
+        checkDistances();
         break;
     }
     commanderSetSetpoint(&setpoint, 3);
