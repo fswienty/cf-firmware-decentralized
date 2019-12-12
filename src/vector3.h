@@ -1,3 +1,5 @@
+// My custom vector3 implementation with some arithmentic
+
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>

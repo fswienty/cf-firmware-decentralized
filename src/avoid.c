@@ -45,19 +45,19 @@ typedef struct _DroneData
   Vector3 pos;
 } DroneData;  // size: 4 + 12 bytes
 
-static DroneData droneData;  // this quadcopter's id and position
-static Vector3 targetPosition;  // this quadcopter's target position
+static DroneData droneData;  // contains this drones's id and position
+static Vector3 targetPosition;  // this drones's target position
 static uint8_t receivedDroneId;  // id of the last received droneData
-static uint8_t triggerDroneId;  // receiving droneData with this id triggers this drone to transmit its own droneData
-static DroneData othersData[OTHERDRONESAMOUNT];  // array of the droneData of the other quadcopters
-static P2PPacket pk;
+static uint8_t triggerDroneId;  // receiving droneData with this id triggers this drone to transmit its own droneData. set during initialization, don't change at runtime.
+static DroneData othersData[OTHERDRONESAMOUNT];  // array of the droneData of the other drones
+static P2PPacket pk;  // the radio packed that is send to other drones
 
 void p2pCallbackHandler(P2PPacket *p)
 {
-  DroneData receivedPosition;
-  memcpy(&receivedPosition, p->data, sizeof(DroneData));
-  receivedDroneId = receivedPosition.id;
-  othersData[receivedPosition.id] = receivedPosition;
+  DroneData receivedDroneData;
+  memcpy(&receivedDroneData, p->data, sizeof(DroneData));
+  receivedDroneId = receivedDroneData.id;
+  othersData[receivedDroneData.id] = receivedDroneData;
 }
 
 static void communicate()
@@ -140,7 +140,7 @@ void appMain()
 
   static uint8_t droneAmount = 0;
   // drone.cmd value meanings:
-  // >=100: used to trigger initialization
+  // 100: used to trigger initialization
   // 1:  start
   // 2:  land
   // 3:  debug1
@@ -148,9 +148,9 @@ void appMain()
   // be careful not to use these values for something else 
   static int8_t droneCmd = 0;
   PARAM_GROUP_START(drone)
+  PARAM_ADD(PARAM_UINT8, amount, &droneAmount)
   PARAM_ADD(PARAM_UINT8, id, &droneData.id)
   PARAM_ADD(PARAM_UINT8, triggerId, &triggerDroneId)
-  PARAM_ADD(PARAM_UINT8, amount, &droneAmount)
   PARAM_ADD(PARAM_INT8, cmd, &droneCmd)
   PARAM_ADD(PARAM_FLOAT, targetX, &targetPosition.x)
   PARAM_ADD(PARAM_FLOAT, targetY, &targetPosition.y)
@@ -184,8 +184,7 @@ void appMain()
       if (droneCmd == 100)
       {
         // INIT
-        // droneData.id = droneCmd - 100;
-        receivedDroneId = 255;  // if you ever try this code with 255 drones and it doesn't work: here's your problem
+        receivedDroneId = 255;
         pk.port = 0;
 
         // put DroneData structs with out of bounds values into the othersData array
