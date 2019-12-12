@@ -8,17 +8,40 @@ from cflib.crazyflie.swarm import CachedCfFactory
 from cflib.crazyflie.swarm import Swarm
 
 
-def init_drone(scf, amount):
+def init_swarm(swarm):
+    available_drones = []
+    for uri in swarm._cfs.keys():
+        available_drones.append(int(uri[-1]))
+    available_drones.sort()
+    print(f"Available drones: {available_drones}")
+
+    args_dict = {}
+    for uri in swarm._cfs.keys():
+        amount = len(uris)
+        droneId = int(uri[-1])
+        triggerIdIndex = available_drones.index(droneId)
+        if triggerIdIndex == 0:
+            triggerIdIndex = len(available_drones) - 1
+        else:
+            triggerIdIndex -= 1
+        triggerId = available_drones[triggerIdIndex]
+
+        args_dict[uri] = [amount, droneId, triggerId]
+    swarm.parallel_safe(init_drone, args_dict=args_dict)
+
+
+def init_drone(scf, amount, droneId, triggerId):
     time.sleep(0.2)
     func.set_param(scf, 'drone.amount', amount)
-    # print("set amount")
     time.sleep(0.2)
-    droneId = int(scf.cf.link_uri[-1])
-    func.set_param(scf, 'drone.cmd', 100 + droneId)
-    # print("set init and id")
+    func.set_param(scf, 'drone.id', droneId)
+    time.sleep(0.2)
+    func.set_param(scf, 'drone.triggerId', triggerId)
+    time.sleep(0.2)
+    func.set_param(scf, 'drone.cmd', 100)
     time.sleep(0.2)
     func.get_param(scf, 'dbg.chr')
-    print(f"Initialized drone nr {droneId}")
+    print(f"Initialized drone nr {droneId}, prev drone: {triggerId}")
 
 
 uris = {
@@ -35,14 +58,9 @@ if __name__ == '__main__':
 
     with Swarm(uris, factory=factory) as swarm:
         # swarm.parallel(func.reset_estimator)
-
         print('Waiting for parameters to be downloaded...')
         swarm.parallel(func.wait_for_param_download)
-
-        args_dict = {}
-        for uri in swarm._cfs.keys():
-            args_dict[uri] = [len(uris)]
-        swarm.parallel_safe(init_drone, args_dict=args_dict)
+        init_swarm(swarm)
         print("###################################")
 
 

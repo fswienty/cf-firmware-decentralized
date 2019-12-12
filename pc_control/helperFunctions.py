@@ -6,7 +6,7 @@ from cflib.crazyflie.syncLogger import SyncLogger
 
 ##### PARAMETER GET AND SET METHODS #####
 def set_param(scf, param_name, value):
-    #print(f"param_name: {type(param_name)} {param_name} | value: {type(value)} {value}")
+    # print(f"param_name: {type(param_name)} {param_name} | value: {type(value)} {value}")
     cf = scf.cf
     cf.param.set_value(str(param_name), str(value))
 

@@ -47,14 +47,26 @@ typedef struct _DroneData
 
 static DroneData droneData;  // this quadcopter's id and position
 static Vector3 targetPosition;  // this quadcopter's target position
-static uint8_t previousDroneId;  // the id of the drone that broadcasts its position before this one. compare this to the id in received droneData in the p2pcallback to know when this drone's turn has come.
+static uint8_t receivedDroneId;  // id of the last received droneData
+static uint8_t triggerDroneId;  // receiving droneData with this id triggers this drone to transmit its own droneData
 static DroneData othersData[OTHERDRONESAMOUNT];  // array of the droneData of the other quadcopters
+static P2PPacket pk;
 
 void p2pCallbackHandler(P2PPacket *p)
 {
   DroneData receivedPosition;
   memcpy(&receivedPosition, p->data, sizeof(DroneData));
+  receivedDroneId = receivedPosition.id;
   othersData[receivedPosition.id] = receivedPosition;
+}
+
+static void communicate()
+{
+  if (receivedDroneId == triggerDroneId)
+  {
+    memcpy(pk.data, &droneData, sizeof(DroneData));
+    radiolinkSendP2PPacketBroadcast(&pk);
+  }
 }
 
 static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
@@ -77,10 +89,6 @@ static bool checkDistances()
   for (int i = 0; i < OTHERDRONESAMOUNT; i++)
   {
     Vector3 otherPosition = othersData[i].pos;
-    if (otherPosition.x == DUMMYPOSITION)
-    {
-      continue;
-    }
     Vector3 droneToOther = sub(dronePosition, otherPosition);
     float distance = magnitude(droneToOther);
     if (distance < 0.3f)
@@ -128,9 +136,7 @@ void appMain()
 {
   static point_t kalmanPosition;
   static setpoint_t setpoint;
-
   static State state = uninitialized;
-  static P2PPacket pk;
 
   static uint8_t droneAmount = 0;
   // drone.cmd value meanings:
@@ -142,7 +148,8 @@ void appMain()
   // be careful not to use these values for something else 
   static int8_t droneCmd = 0;
   PARAM_GROUP_START(drone)
-  PARAM_ADD(PARAM_UINT8, prevId, &previousDroneId)
+  PARAM_ADD(PARAM_UINT8, id, &droneData.id)
+  PARAM_ADD(PARAM_UINT8, triggerId, &triggerDroneId)
   PARAM_ADD(PARAM_UINT8, amount, &droneAmount)
   PARAM_ADD(PARAM_INT8, cmd, &droneCmd)
   PARAM_ADD(PARAM_FLOAT, targetX, &targetPosition.x)
@@ -174,11 +181,11 @@ void appMain()
     // don't execute the entire while loop before initialization happend
     if (state == uninitialized)
     {
-      if (droneCmd >= 100)
+      if (droneCmd == 100)
       {
         // INIT
-        //droneData.id = droneId;
-        droneData.id = droneCmd - 100;
+        // droneData.id = droneCmd - 100;
+        receivedDroneId = 255;  // if you ever try this code with 255 drones and it doesn't work: here's your problem
         pk.port = 0;
 
         // put DroneData structs with out of bounds values into the othersData array
@@ -219,10 +226,8 @@ void appMain()
         state = debug2;
         break;
       case 50:
-        pk.size = sizeof(DroneData);
         memcpy(pk.data, &droneData, sizeof(DroneData));
         radiolinkSendP2PPacketBroadcast(&pk);
-        dbgchr = pk.size;
         break;
       default:
         break;
@@ -254,9 +259,11 @@ void appMain()
         }
         break;
       case flying:
+        communicate();
         approachTarget(&setpoint);
         break;
       case debug1:
+        communicate();
         if (checkDistances())
         {
           ledSetAll();

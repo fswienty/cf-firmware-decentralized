@@ -56,9 +56,5 @@ Vector3 norm(Vector3 vec3)
     // result.y = vec3.y * magInv;
     // result.z = vec3.z * magInv;
     // return result;
-    return (Vector3){
-        vec3.x * magInv,
-        vec3.y * magInv,
-        vec3.z * magInv
-    };
+    return mul(vec3, magInv);
 }
