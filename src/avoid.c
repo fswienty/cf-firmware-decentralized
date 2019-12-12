@@ -50,7 +50,7 @@ static Vector3 targetPosition;  // this drones's target position
 static uint8_t receivedDroneId;  // id of the last received droneData
 static uint8_t triggerDroneId;  // receiving droneData with this id triggers this drone to transmit its own droneData. set during initialization, don't change at runtime.
 static DroneData othersData[OTHERDRONESAMOUNT];  // array of the droneData of the other drones
-static P2PPacket pk;  // the radio packed that is send to other drones
+static P2PPacket pk;  // the radio packet that is send to other drones
 
 void p2pCallbackHandler(P2PPacket *p)
 {
