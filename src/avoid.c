@@ -23,7 +23,7 @@
 #define MAX(a, b) ((a > b) ? a : b)
 #define MIN(a, b) ((a < b) ? a : b)
 
-#define OTHERDRONESAMOUNT 10  // size of the array containing the positions of other drones. must be at least as high as the highest id among all drones.
+#define OTHERDRONESAMOUNT 10  // size of the array containing the positions of other drones. must be at least as high as the highest id among all drones plus one.
 #define DUMMYPOSITION 99999  // the xyz coordinates of non-connected drones will be set to this value
 
 //#define DEBUG_MODULE "PUSH
