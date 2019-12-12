@@ -3,21 +3,19 @@ import time
 
 import helperFunctions as func
 
-# from cflib.drivers.crazyradio import Crazyradio
 import cflib.crtp
-# from cflib.crazyflie.log import LogConfig
 from cflib.crazyflie.swarm import CachedCfFactory
 from cflib.crazyflie.swarm import Swarm
-# from cflib.crazyflie.syncLogger import SyncLogger
-# from cflib.crazyflie import Crazyflie
-# from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 
 
 def init_drone(scf, amount):
+    time.sleep(0.2)
     func.set_param(scf, 'drone.amount', amount)
+    # print("set amount")
     time.sleep(0.2)
     droneId = int(scf.cf.link_uri[-1])
     func.set_param(scf, 'drone.cmd', 100 + droneId)
+    # print("set init and id")
     time.sleep(0.2)
     func.get_param(scf, 'dbg.chr')
     print(f"Initialized drone nr {droneId}")
@@ -33,19 +31,20 @@ if __name__ == '__main__':
     print("###################################")
     # logging.basicConfig(level=logging.DEBUG)
     cflib.crtp.init_drivers(enable_debug_driver=False)
-
     factory = CachedCfFactory(rw_cache='./cache')
+
     with Swarm(uris, factory=factory) as swarm:
-        swarm.parallel(func.reset_estimator)
+        # swarm.parallel(func.reset_estimator)
 
         print('Waiting for parameters to be downloaded...')
         swarm.parallel(func.wait_for_param_download)
-        # print(f"Connected crazyflies: {swarm._cfs}")
+
         args_dict = {}
         for uri in swarm._cfs.keys():
             args_dict[uri] = [len(uris)]
         swarm.parallel_safe(init_drone, args_dict=args_dict)
         print("###################################")
+
 
         while True:
             inp = input()
