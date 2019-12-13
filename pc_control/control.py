@@ -7,6 +7,8 @@ import cflib.crtp
 from cflib.crazyflie.swarm import CachedCfFactory
 from cflib.crazyflie.swarm import Swarm
 
+from cflib.crazyflie.console import Console
+
 
 def init_swarm(swarm):
     available_drones = []
@@ -61,6 +63,7 @@ if __name__ == '__main__':
         print('Waiting for parameters to be downloaded...')
         swarm.parallel(func.wait_for_param_download)
         init_swarm(swarm)
+        con = Console(swarm._cfs[0])
         print("###################################")
 
 
@@ -120,3 +123,16 @@ if __name__ == '__main__':
                 print("Exeption occured")
         else:
             print("While loop exited due to some unexpected reason")
+
+
+
+# from cflib.drivers.crazyradio import Crazyradio
+
+# cr = Crazyradio(devid=0)
+# cr.set_channel(80)
+# cr.set_data_rate(cr.DR_2MPS)
+
+# cr.set_address((0xe7, 0xe7, 0xe7, 0xe7, 0xe4))
+# cr.set_ack_enable(False)
+# cr.send_packet((0xff, 0x80, 0x63, 0x01))
+# print('send')

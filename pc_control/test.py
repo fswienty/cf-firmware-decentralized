@@ -18,4 +18,4 @@ uris = {
 }
 
 if __name__ == '__main__':
-    print(len(uris))
+    print(type((0xff, 0x80, 0x63, 0x01)))

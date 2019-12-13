@@ -177,7 +177,8 @@ void appMain()
   while (1)
   {
     vTaskDelay(M2T(10));
-
+    consolePrintf("int %d, string %s", 546, "benis");
+    
     // don't execute the entire while loop before initialization happend
     if (state == uninitialized)
     {
