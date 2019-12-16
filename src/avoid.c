@@ -9,7 +9,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "debug.h"
+//#include "debug.h"
 
 #include "param.h"
 #include "log.h"
@@ -19,6 +19,7 @@
 #include "radiolink.h"
 #include "led.h"
 #include "vector3.h"
+#include "console.h"
 
 #define MAX(a, b) ((a > b) ? a : b)
 #define MIN(a, b) ((a < b) ? a : b)
@@ -131,6 +132,11 @@ static void shutOffEngines(setpoint_t *sp)
   sp->mode.yaw = modeDisable;
 }
 
+static void print(char* message)
+{
+  consolePrintf("%d: %s\n", droneData.id, message);
+}
+
 // ENTRY POINT
 void appMain()
 {
@@ -177,7 +183,7 @@ void appMain()
   while (1)
   {
     vTaskDelay(M2T(10));
-    consolePrintf("int %d, string %s", 546, "benis");
+    //consolePrintf("int %d, string %s", 546, "benis");
     
     // don't execute the entire while loop before initialization happend
     if (state == uninitialized)
@@ -207,9 +213,12 @@ void appMain()
 
     // put kalman position in this drone's droneData struct
     estimatorKalmanGetEstimatedPos(&kalmanPosition);
-    droneData.pos.x = kalmanPosition.x;
-    droneData.pos.y = kalmanPosition.y;
-    droneData.pos.z = kalmanPosition.z;
+    // droneData.pos.x = kalmanPosition.x;
+    // droneData.pos.y = kalmanPosition.y;
+    // droneData.pos.z = kalmanPosition.z;
+    droneData.pos.x = targetPosition.x;
+    droneData.pos.y = targetPosition.y;
+    droneData.pos.z = targetPosition.z;
 
     switch (droneCmd)
     {
@@ -221,9 +230,14 @@ void appMain()
         break;
       case 3:
         state = debug1;
+        // DEBUG_PRINT("entered state debug1\n#########\nblip blup\n");
         break;
       case 4:
         state = debug2;
+        print("oi mate gaaaaaaaaaaaa");
+        break;
+      case 5: // start the communication
+        receivedDroneId = triggerDroneId;
         break;
       case 50:
         memcpy(pk.data, &droneData, sizeof(DroneData));

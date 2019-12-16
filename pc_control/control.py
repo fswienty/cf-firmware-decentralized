@@ -7,8 +7,6 @@ import cflib.crtp
 from cflib.crazyflie.swarm import CachedCfFactory
 from cflib.crazyflie.swarm import Swarm
 
-from cflib.crazyflie.console import Console
-
 
 def init_swarm(swarm):
     available_drones = []
@@ -48,7 +46,7 @@ def init_drone(scf, amount, droneId, triggerId):
 
 uris = {
     'radio://0/80/2M/E7E7E7E7E4'
-    ,'radio://0/80/2M/E7E7E7E7E9'
+    #,'radio://0/80/2M/E7E7E7E7E9'
 }
 
 
@@ -63,9 +61,7 @@ if __name__ == '__main__':
         print('Waiting for parameters to be downloaded...')
         swarm.parallel(func.wait_for_param_download)
         init_swarm(swarm)
-        con = Console(swarm._cfs[0])
         print("###################################")
-
 
         while True:
             inp = input()
