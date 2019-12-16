@@ -44,9 +44,21 @@ def init_drone(scf, amount, droneId, triggerId):
     print(f"Initialized drone nr {droneId}, prev drone: {triggerId}")
 
 
+def start_communications(scf):
+    func.set_param(scf, 'drone.cmd', 3)
+
+
+def trigger(scf):
+    func.set_param(scf, 'drone.cmd', 5)
+
+
+def debug(scf):
+    func.set_param(scf, 'drone.cmd', 10)
+
+
 uris = {
     'radio://0/80/2M/E7E7E7E7E4'
-    #,'radio://0/80/2M/E7E7E7E7E9'
+    ,'radio://0/80/2M/E7E7E7E7E9'
 }
 
 
@@ -112,6 +124,24 @@ if __name__ == '__main__':
                         swarm.parallel_safe(func.get_param, args_dict=args_dict)
                     else:
                         func.get_param(crazyflie, args[2])
+
+                elif action == "comm" and len(args) == 2:  # usage: [crazyflie] comm
+                    if crazyflie == "all":
+                        swarm.parallel_safe(start_communications, args_dict=args_dict)
+                    else:
+                        start_communications(crazyflie)
+
+                elif action == "trigger" and len(args) == 2:  # usage: [crazyflie] trigger
+                    if crazyflie == "all":
+                        swarm.parallel_safe(trigger, args_dict=args_dict)
+                    else:
+                        trigger(crazyflie)
+
+                elif action == "debug" and len(args) == 2:  # usage: [crazyflie] debug
+                    if crazyflie == "all":
+                        swarm.parallel_safe(debug, args_dict=args_dict)
+                    else:
+                        debug(crazyflie)
 
                 else:
                     print("Invalid command")
