@@ -92,16 +92,18 @@ static DroneData othersData[OTHERDRONESAMOUNT];  // array of the droneData of th
 
 void p2pCallbackHandler(P2PPacket *p)
 {
+  consolePrintf("%d p2pCallback \n", droneData.id);
   DroneData receivedDroneData;
   memcpy(&receivedDroneData, p->data, sizeof(DroneData));
   lastReceivedDroneId = receivedDroneData.id;
   othersData[lastReceivedDroneId] = receivedDroneData;
 
-  consolePrintf("%d got: id=%d, x=%.2f \n", droneData.id, receivedDroneData.id, receivedDroneData.pos.x);
+  //consolePrintf("%d got: id=%d, x=%.2f \n", droneData.id, receivedDroneData.id, receivedDroneData.pos.x);
 }
 
 static void communicate()
 {
+  consolePrintf("%d comm, lastId: %d \n", droneData.id, lastReceivedDroneId);
   if (lastReceivedDroneId == triggerDroneId)
   {
     lastReceivedDroneId = 255;  // reset lastReceivedDroneId so this method does not execute again in the next iteration
@@ -227,7 +229,7 @@ void appMain()
   while (1)
   {
     // vTaskDelay(M2T(10));
-    vTaskDelay(M2T(500));
+    vTaskDelay(M2T(2000));
     //consolePrintf("int %d, string %s", 546, "benis");
     
     // don't execute the entire while loop before initialization happend
