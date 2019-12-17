@@ -38,6 +38,7 @@ typedef enum
   flying,
   debug1,
   debug2,
+  debug3,
 } State;
 
 typedef struct _DroneData
@@ -48,80 +49,67 @@ typedef struct _DroneData
 
 typedef struct _TestData
 {
-  uint8_t id;
   uint8_t char1;
+  uint8_t char2;
+  float float1;
 } TestData;
 
 static DroneData droneData;  // contains this drones's id and position
 static Vector3 targetPosition;  // this drones's target position
-static uint8_t receivedDroneId;  // id of the last received droneData
+static uint8_t lastReceivedDroneId;  // id of the last received droneData
 static uint8_t triggerDroneId;  // receiving droneData with this id triggers this drone to transmit its own droneData. set during initialization, don't change at runtime.
 static DroneData othersData[OTHERDRONESAMOUNT];  // array of the droneData of the other drones
-static P2PPacket pk;  // the radio packet that is send to other drones
 
-void p2pCallbackHandlerDEBUG(P2PPacket *p)
-{
-  TestData receivedTestData;
-  memcpy(&receivedTestData, p->data, sizeof(TestData));
+// void p2pCallbackHandlerDEBUG(P2PPacket *p)
+// {
+//   TestData testData;
+//   memcpy(&testData, p->data, sizeof(TestData));
 
-  consolePrintf("%d received packet from %d with char1: %d \n", droneData.id, receivedTestData.id, receivedTestData.char1);
-}
+//   consolePrintf("%d received packet with char1: %d, char2: %d, float1: %8.4f \n", droneData.id, testData.char1, testData.char2, testData.float1);
+// }
 
-static void communicateDEBUG()
-{
-  if (receivedDroneId == triggerDroneId)
-  {
-    receivedDroneId = 255;
-    P2PPacket packet;
-    packet.port = 0;
+// static void communicateDEBUG()
+// {
+//   if (lastReceivedDroneId == triggerDroneId)
+//   {
+//     lastReceivedDroneId = 255;
+//     P2PPacket packet;
+//     packet.port = 0;
+//     packet.size = sizeof(TestData);
 
-    TestData testData;
-    testData.id = droneData.id;
-    testData.char1 = 69;
-    memcpy(packet.data, &testData, sizeof(TestData));
-    memcpy(&testData, packet.data, sizeof(TestData));
-    consolePrintf("%d sends packet with char1: %d \n", testData.id, testData.char1);
-    radiolinkSendP2PPacketBroadcast(&packet);
-  }
-}
+//     TestData testData;
+//     testData.char1 = 69;
+//     testData.char2 = 42;
+//     testData.float1 = 1337.1337;
+//     memcpy(packet.data, &testData, sizeof(TestData));
+//     memcpy(&testData, packet.data, sizeof(TestData));
+//     consolePrintf("%d sends packet with char1: %d, char2: %d, float1: %8.4f \n", droneData.id, testData.char1, testData.char2, testData.float1);
+//     consolePrintf("TestData size: %d \n", sizeof(TestData));
+//     consolePrintf("packet size: %d \n", packet.size);
+//     radiolinkSendP2PPacketBroadcast(&packet);
+//   }
+// }
 
 void p2pCallbackHandler(P2PPacket *p)
 {
   DroneData receivedDroneData;
   memcpy(&receivedDroneData, p->data, sizeof(DroneData));
-  receivedDroneId = receivedDroneData.id;
-  othersData[receivedDroneId] = receivedDroneData;
+  lastReceivedDroneId = receivedDroneData.id;
+  othersData[lastReceivedDroneId] = receivedDroneData;
 
-  consolePrintf("%s\n", "##############");
-  consolePrintf("%d received packet from %d:\n", droneData.id, receivedDroneData.id);
-  consolePrintf("pos x: %.2f y: %.2f z: %.2f\n", receivedDroneData.pos.x, receivedDroneData.pos.y, receivedDroneData.pos.z);
-  consolePrintf("%s\n", "##############");
+  consolePrintf("%d got: id=%d, x=%.2f \n", droneData.id, receivedDroneData.id, receivedDroneData.pos.x);
 }
 
 static void communicate()
 {
-  if (receivedDroneId == triggerDroneId)
+  if (lastReceivedDroneId == triggerDroneId)
   {
-    receivedDroneId = 255;
+    lastReceivedDroneId = 255;  // reset lastReceivedDroneId so this method does not execute again in the next iteration
     P2PPacket packet;
     packet.port = 0;
-
+    packet.size = sizeof(DroneData);
     memcpy(packet.data, &droneData, sizeof(DroneData));
-    // memcpy(pk.data, &droneData, sizeof(DroneData));
-
-    consolePrintf("%s\n", "##############");
-    consolePrintf("%d sends a packet:\n", droneData.id);
-    consolePrintf("pos x: %.2f y: %.2f z: %.2f\n", droneData.pos.x, droneData.pos.y, droneData.pos.z);
-
-    // DroneData testRecopy;
-    // memcpy(&testRecopy, packet.data, sizeof(DroneData));
-    // consolePrintf("the packet contains:\n");
-    // consolePrintf("id: %d\n", testRecopy.id);
-    // consolePrintf("pos x: %.2f y: %.2f z: %.2f\n", testRecopy.pos.x, testRecopy.pos.y, testRecopy.pos.z);
-    consolePrintf("%s\n", "##############");
-
     radiolinkSendP2PPacketBroadcast(&packet);
-    // radiolinkSendP2PPacketBroadcast(&pk);
   }
 }
 
@@ -138,27 +126,27 @@ static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
   sp->attitude.yaw = 0;
 }
 
-static bool checkDistances()
-{
-  consolePrintf("Drone %d checks its distances", droneData.id);
-  Vector3 dronePosition = droneData.pos;
-  bool otherIsClose = false;
-  for (int i = 0; i < OTHERDRONESAMOUNT; i++)
-  {
-    Vector3 otherPosition = othersData[i].pos;
-    if (otherPosition.x == DUMMYPOSITION)
-    {
-      continue;
-    }
-    Vector3 droneToOther = sub(dronePosition, otherPosition);
-    float distance = magnitude(droneToOther);
-    if (distance < 0.3f)
-    {
-      otherIsClose = true;
-    }
-  }
-  return otherIsClose;
-}
+// static bool checkDistances()
+// {
+//   consolePrintf("Drone %d checks its distances", droneData.id);
+//   Vector3 dronePosition = droneData.pos;
+//   bool otherIsClose = false;
+//   for (int i = 0; i < OTHERDRONESAMOUNT; i++)
+//   {
+//     Vector3 otherPosition = othersData[i].pos;
+//     if (otherPosition.x == DUMMYPOSITION)
+//     {
+//       continue;
+//     }
+//     Vector3 droneToOther = sub(dronePosition, otherPosition);
+//     float distance = magnitude(droneToOther);
+//     if (distance < 0.3f)
+//     {
+//       otherIsClose = true;
+//     }
+//   }
+//   return otherIsClose;
+// }
 
 static void approachTarget(setpoint_t *sp)
 {
@@ -190,11 +178,6 @@ static void shutOffEngines(setpoint_t *sp)
   sp->mode.y = modeDisable;
   sp->mode.z = modeDisable;
   sp->mode.yaw = modeDisable;
-}
-
-static void print(char* message)
-{
-  consolePrintf("Drone %d: %s\n", droneData.id, message);
 }
 
 // ENTRY POINT
@@ -239,12 +222,12 @@ void appMain()
   PARAM_ADD(LOG_INT32, int, &dbgint)
   LOG_GROUP_STOP(dbg)
 
-  p2pRegisterCB(p2pCallbackHandlerDEBUG);
+  p2pRegisterCB(p2pCallbackHandler);
 
   while (1)
   {
-    vTaskDelay(M2T(10));
-    //vTaskDelay(M2T(990));
+    // vTaskDelay(M2T(10));
+    vTaskDelay(M2T(500));
     //consolePrintf("int %d, string %s", 546, "benis");
     
     // don't execute the entire while loop before initialization happend
@@ -253,8 +236,7 @@ void appMain()
       if (droneCmd == 100)
       {
         // INIT
-        receivedDroneId = 255;
-        pk.port = 0;
+        lastReceivedDroneId = 255;
 
         // put DroneData structs with out of bounds values into the othersData array
         for (int i = 0; i < OTHERDRONESAMOUNT; i++)
@@ -292,14 +274,18 @@ void appMain()
         break;
       case 3:
         state = debug1;
-        consolePrintf("Drone %d: %s\n", droneData.id, "entered communication debug state");
+        consolePrintf("Drone %d entered communication debug state\n", droneData.id);
         break;
       case 4:
         state = debug2;
-        consolePrintf("Drone %d: %s\n", droneData.id, "entered idle state");
+        consolePrintf("Drone %d entered idle state\n", droneData.id);
+        break;
+      case 6:
+        communicate();
+        consolePrintf("Drone %d executed communicate() once\n", droneData.id);
         break;
       case 5: // start the communication
-        receivedDroneId = triggerDroneId;
+        lastReceivedDroneId = triggerDroneId;
         break;
       case 10: // print debug info
         consolePrintf("%s\n", "##############");
@@ -307,12 +293,8 @@ void appMain()
         consolePrintf("pos x: %.2f y: %.2f z: %.2f\n", droneData.pos.x, droneData.pos.y, droneData.pos.z);
         consolePrintf("target x: %.2f y: %.2f z: %.2f\n", targetPosition.x, targetPosition.y, targetPosition.z);
         consolePrintf("triggerId: %d\n", triggerDroneId);
-        consolePrintf("receivedId: %d\n", receivedDroneId);
+        consolePrintf("receivedId: %d\n", lastReceivedDroneId);
         consolePrintf("%s\n", "##############");
-        break;
-      case 50:
-        memcpy(pk.data, &droneData, sizeof(DroneData));
-        radiolinkSendP2PPacketBroadcast(&pk);
         break;
       default:
         break;
@@ -348,7 +330,7 @@ void appMain()
         approachTarget(&setpoint);
         break;
       case debug1:
-        communicateDEBUG();
+        communicate();
         // if (checkDistances())
         // {
         //   ledSetAll();
@@ -359,6 +341,8 @@ void appMain()
         // }   
         break;
       case debug2:
+        break;
+      case debug3:
         break;
     }
     commanderSetSetpoint(&setpoint, 3);

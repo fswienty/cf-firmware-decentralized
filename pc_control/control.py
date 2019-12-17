@@ -57,8 +57,8 @@ def debug(scf):
 
 
 uris = {
-    'radio://0/80/2M/E7E7E7E7E4'
-    ,'radio://0/80/2M/E7E7E7E7E9'
+    'radio://0/80/2M/E7E7E7E7E4',
+    'radio://0/80/2M/E7E7E7E7E9',
 }
 
 
