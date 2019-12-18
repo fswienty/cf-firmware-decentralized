@@ -44,8 +44,12 @@ def init_drone(scf, amount, droneId, triggerId):
     print(f"Initialized drone nr {droneId}, prev drone: {triggerId}")
 
 
-def start_communications(scf):
+def comm(scf):
     func.set_param(scf, 'drone.cmd', 3)
+
+
+def idle(scf):
+    func.set_param(scf, 'drone.cmd', 4)
 
 
 def trigger(scf):
@@ -127,9 +131,15 @@ if __name__ == '__main__':
 
                 elif action == "comm" and len(args) == 2:  # usage: [crazyflie] comm
                     if crazyflie == "all":
-                        swarm.parallel_safe(start_communications, args_dict=args_dict)
+                        swarm.parallel_safe(comm, args_dict=args_dict)
                     else:
-                        start_communications(crazyflie)
+                        comm(crazyflie)
+
+                elif action == "idle" and len(args) == 2:  # usage: [crazyflie] idle
+                    if crazyflie == "all":
+                        swarm.parallel_safe(idle, args_dict=args_dict)
+                    else:
+                        idle(crazyflie)
 
                 elif action == "trigger" and len(args) == 2:  # usage: [crazyflie] trigger
                     if crazyflie == "all":

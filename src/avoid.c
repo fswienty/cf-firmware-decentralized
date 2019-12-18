@@ -43,76 +43,50 @@ typedef enum
 
 typedef struct _DroneData
 {
+  uint32_t tripCounter;
   uint8_t id;
   Vector3 pos;
 } DroneData;  // size: 4 + 12 bytes
 
-typedef struct _TestData
-{
-  uint8_t char1;
-  uint8_t char2;
-  float float1;
-} TestData;
 
 static DroneData droneData;  // contains this drones's id and position
 static Vector3 targetPosition;  // this drones's target position
-static uint8_t lastReceivedDroneId;  // id of the last received droneData
-static uint8_t triggerDroneId;  // receiving droneData with this id triggers this drone to transmit its own droneData. set during initialization, don't change at runtime.
 static DroneData othersData[OTHERDRONESAMOUNT];  // array of the droneData of the other drones
+static uint8_t lastReceivedDroneId;  // id of the last received droneData
+static uint8_t prevDroneId;  // Id of the previous drone in the cycle. SET DURING INITIALIZATION, DON'T CHANGE AT RUNTIME.
+static uint8_t nextDroneId;  // Id of the next drone in the cycle. SET DURING INITIALIZATION, DON'T CHANGE AT RUNTIME.
 
-// void p2pCallbackHandlerDEBUG(P2PPacket *p)
-// {
-//   TestData testData;
-//   memcpy(&testData, p->data, sizeof(TestData));
-
-//   consolePrintf("%d received packet with char1: %d, char2: %d, float1: %8.4f \n", droneData.id, testData.char1, testData.char2, testData.float1);
-// }
-
-// static void communicateDEBUG()
-// {
-//   if (lastReceivedDroneId == triggerDroneId)
-//   {
-//     lastReceivedDroneId = 255;
-//     P2PPacket packet;
-//     packet.port = 0;
-//     packet.size = sizeof(TestData);
-
-//     TestData testData;
-//     testData.char1 = 69;
-//     testData.char2 = 42;
-//     testData.float1 = 1337.1337;
-//     memcpy(packet.data, &testData, sizeof(TestData));
-//     memcpy(&testData, packet.data, sizeof(TestData));
-//     consolePrintf("%d sends packet with char1: %d, char2: %d, float1: %8.4f \n", droneData.id, testData.char1, testData.char2, testData.float1);
-//     consolePrintf("TestData size: %d \n", sizeof(TestData));
-//     consolePrintf("packet size: %d \n", packet.size);
-//     radiolinkSendP2PPacketBroadcast(&packet);
-//   }
-// }
-
-void p2pCallbackHandler(P2PPacket *p)
-{
-  consolePrintf("%d p2pCallback \n", droneData.id);
-  DroneData receivedDroneData;
-  memcpy(&receivedDroneData, p->data, sizeof(DroneData));
-  lastReceivedDroneId = receivedDroneData.id;
-  othersData[lastReceivedDroneId] = receivedDroneData;
-
-  //consolePrintf("%d got: id=%d, x=%.2f \n", droneData.id, receivedDroneData.id, receivedDroneData.pos.x);
-}
+static bool mustSend;
+static bool commContinued;
 
 static void communicate()
 {
-  consolePrintf("%d comm, lastId: %d \n", droneData.id, lastReceivedDroneId);
-  if (lastReceivedDroneId == triggerDroneId)
+  consolePrintf("%d comm \n", droneData.id);
+
+  if (mustSend)
   {
-    lastReceivedDroneId = 255;  // reset lastReceivedDroneId so this method does not execute again in the next iteration
     P2PPacket packet;
     packet.port = 0;
     packet.size = sizeof(DroneData);
     memcpy(packet.data, &droneData, sizeof(DroneData));
     radiolinkSendP2PPacketBroadcast(&packet);
   }
+}
+
+void p2pCallbackHandler(P2PPacket *p)
+{
+  consolePrintf("%d p2pCallback \n", droneData.id);
+
+  DroneData receivedDroneData;
+  memcpy(&receivedDroneData, p->data, sizeof(DroneData));
+  lastReceivedDroneId = receivedDroneData.id;
+  if (receivedDroneData.id == prevDroneId)
+  {
+    mustSend = true;
+  }
+
+  // othersData[receivedDroneData.id] = receivedDroneData;
+  //consolePrintf("%d got: id=%d, x=%.2f \n", droneData.id, receivedDroneData.id, receivedDroneData.pos.x);
 }
 
 static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
@@ -197,12 +171,12 @@ void appMain()
   // 3:  debug1
   // 4:  debug2
   // 5:  trigger a drone to start the communication
-  // be careful not to use these values for something else 
+  // be careful not to use these values for something else
   static int8_t droneCmd = 0;
   PARAM_GROUP_START(drone)
   PARAM_ADD(PARAM_UINT8, amount, &droneAmount)
   PARAM_ADD(PARAM_UINT8, id, &droneData.id)
-  PARAM_ADD(PARAM_UINT8, triggerId, &triggerDroneId)
+  PARAM_ADD(PARAM_UINT8, triggerId, &prevDroneId)
   PARAM_ADD(PARAM_INT8, cmd, &droneCmd)
   PARAM_ADD(PARAM_FLOAT, targetX, &targetPosition.x)
   PARAM_ADD(PARAM_FLOAT, targetY, &targetPosition.y)
@@ -231,7 +205,7 @@ void appMain()
     // vTaskDelay(M2T(10));
     vTaskDelay(M2T(2000));
     //consolePrintf("int %d, string %s", 546, "benis");
-    
+
     // don't execute the entire while loop before initialization happend
     if (state == uninitialized)
     {
@@ -274,27 +248,28 @@ void appMain()
       case 2:
         state = landing;
         break;
-      case 3:
+      case 3:  // comm
         state = debug1;
         consolePrintf("Drone %d entered communication debug state\n", droneData.id);
         break;
       case 4:
-        state = debug2;
+        state = enginesOff;
         consolePrintf("Drone %d entered idle state\n", droneData.id);
         break;
       case 6:
         communicate();
         consolePrintf("Drone %d executed communicate() once\n", droneData.id);
         break;
-      case 5: // start the communication
-        lastReceivedDroneId = triggerDroneId;
+      case 5: // trigger
+        // lastReceivedDroneId = prevDroneId;
+        communicate();
         break;
-      case 10: // print debug info
+      case 10: // debug
         consolePrintf("%s\n", "##############");
         consolePrintf("Drone %d info:\n", droneData.id);
         consolePrintf("pos x: %.2f y: %.2f z: %.2f\n", droneData.pos.x, droneData.pos.y, droneData.pos.z);
         consolePrintf("target x: %.2f y: %.2f z: %.2f\n", targetPosition.x, targetPosition.y, targetPosition.z);
-        consolePrintf("triggerId: %d\n", triggerDroneId);
+        consolePrintf("triggerId: %d\n", prevDroneId);
         consolePrintf("receivedId: %d\n", lastReceivedDroneId);
         consolePrintf("%s\n", "##############");
         break;
@@ -340,7 +315,7 @@ void appMain()
         // else
         // {
         //   ledClearAll();
-        // }   
+        // }
         break;
       case debug2:
         break;
