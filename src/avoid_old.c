@@ -43,23 +43,31 @@ typedef enum
 
 typedef struct _PacketData
 {
+  int32_t ctr;
   uint8_t id;
   Vector3 pos;
 } PacketData;  // size: ? + 12 bytes
 
 
 static PacketData packetData;  // oi
+// static Vector3 positition;  // this drone's position
 static Vector3 targetPosition;  // this drones's target position
 static Vector3 otherPositions[OTHERDRONESAMOUNT];  // array of the positions of the other drones
+// static uint8_t expectedCtr;  // the ctr the next packet should have
 static uint8_t lastReceivedDroneId;  // id of the last received packetData
+static uint8_t prevDroneId;  // Id of the previous drone in the cycle. SET DURING INITIALIZATION, DON'T CHANGE AT RUNTIME.
+static uint8_t nextDroneId;  // Id of the next drone in the cycle. SET DURING INITIALIZATION, DON'T CHANGE AT RUNTIME.
 static uint8_t droneAmount;  // amount of drones. SET DURING INITIALIZATION, DON'T CHANGE AT RUNTIME.
-static uint8_t timer;
+
+static bool mustSend;
+// static bool commContinued;
 
 static void communicate()
 {
-  if (timer == 2 * packetData.id)
+  if (mustSend)
   {
-    // consolePrintf("%d comm \n", packetData.id);
+    consolePrintf("%d comm \n", packetData.id);
+
     P2PPacket packet;
     packet.port = 0;
     packet.size = sizeof(PacketData);
@@ -72,8 +80,23 @@ void p2pCallbackHandler(P2PPacket *p)
 {
   PacketData receivedPacketData;
   memcpy(&receivedPacketData, p->data, sizeof(PacketData));
-  otherPositions[receivedPacketData.id] = receivedPacketData.pos;
-  // consolePrintf("%d rec pkt: id=%d\n", packetData.id, receivedPacketData.id);
+
+  consolePrintf("%d rec pkt: id=%d ctr=%d \n", packetData.id, receivedPacketData.id, receivedPacketData.ctr);
+  // otherPositions[receivedPacketData.id] = receivedPacketData.pos;
+
+
+  if(receivedPacketData.ctr != packetData.ctr - 1 + droneAmount)
+  {
+    mustSend = false;
+  }
+
+  if (receivedPacketData.ctr == packetData.ctr - 1 + droneAmount)
+  {
+    mustSend = true;
+    packetData.ctr = receivedPacketData.ctr + 1;
+  }
+
+  // consolePrintf("%d got: id=%d, x=%.2f \n", packetData.id, receivedPacketData.id, receivedPacketData.pos.x);
 }
 
 static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
@@ -89,27 +112,27 @@ static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
   sp->attitude.yaw = 0;
 }
 
-static bool checkDistances()
-{
-  // consolePrintf("Drone %d checks its distances", packetData.id);
-  Vector3 dronePosition = packetData.pos;
-  bool otherIsClose = false;
-  for (int i = 0; i < OTHERDRONESAMOUNT; i++)
-  {
-    // Vector3 otherPosition = otherPositions[i];
-    if (otherPositions[i].x == DUMMYPOSITION)
-    {
-      continue;
-    }
-    Vector3 droneToOther = sub(dronePosition, otherPositions[i]);
-    float distance = magnitude(droneToOther);
-    if (distance < 0.3f)
-    {
-      otherIsClose = true;
-    }
-  }
-  return otherIsClose;
-}
+// static bool checkDistances()
+// {
+//   consolePrintf("Drone %d checks its distances", packetData.id);
+//   Vector3 dronePosition = packetData.pos;
+//   bool otherIsClose = false;
+//   for (int i = 0; i < OTHERDRONESAMOUNT; i++)
+//   {
+//     Vector3 otherPosition = otherPositions[i].pos;
+//     if (otherPosition.x == DUMMYPOSITION)
+//     {
+//       continue;
+//     }
+//     Vector3 droneToOther = sub(dronePosition, otherPosition);
+//     float distance = magnitude(droneToOther);
+//     if (distance < 0.3f)
+//     {
+//       otherIsClose = true;
+//     }
+//   }
+//   return otherIsClose;
+// }
 
 static void approachTarget(setpoint_t *sp)
 {
@@ -162,6 +185,9 @@ void appMain()
   PARAM_GROUP_START(drone)
   PARAM_ADD(PARAM_UINT8, amount, &droneAmount)
   PARAM_ADD(PARAM_UINT8, id, &packetData.id)
+  PARAM_ADD(PARAM_UINT8, prevId, &prevDroneId)
+  PARAM_ADD(PARAM_UINT8, nextId, &nextDroneId)
+  PARAM_ADD(PARAM_INT32, ctr, &packetData.ctr)
   PARAM_ADD(PARAM_INT8, cmd, &droneCmd)
   PARAM_ADD(PARAM_FLOAT, targetX, &targetPosition.x)
   PARAM_ADD(PARAM_FLOAT, targetY, &targetPosition.y)
@@ -188,13 +214,8 @@ void appMain()
   while (1)
   {
     // vTaskDelay(M2T(10));
-    vTaskDelay(M2T(10));
-    timer += 1;
-    if(timer == 2 * 10)
-    {
-      timer = 0;
-    }
-    // consolePrintf("Drone %d: timer=%d \n", packetData.id, timer);
+    vTaskDelay(M2T(2000));
+    //consolePrintf("int %d, string %s", 546, "benis");
 
     // don't execute the entire while loop before initialization happend
     if (state == uninitialized)
@@ -203,11 +224,15 @@ void appMain()
       {
         // INIT
         // lastReceivedDroneId = 255;
-        timer = 0;
 
         // put PacketData structs with out of bounds values into the otherPositions array
         for (int i = 0; i < OTHERDRONESAMOUNT; i++)
         {
+          // PacketData dummy;
+          // dummy.id = i;
+          // dummy.pos.x = DUMMYPOSITION;
+          // dummy.pos.y = DUMMYPOSITION;
+          // dummy.pos.z = DUMMYPOSITION;
           otherPositions[i] = (Vector3){DUMMYPOSITION, DUMMYPOSITION, DUMMYPOSITION};
         }
         dbgchr = packetData.id;
@@ -222,9 +247,12 @@ void appMain()
     // packetData.pos.x = kalmanPosition.x;
     // packetData.pos.y = kalmanPosition.y;
     // packetData.pos.z = kalmanPosition.z;
-    packetData.pos.x = targetPosition.x;
-    packetData.pos.y = targetPosition.y;
-    packetData.pos.z = targetPosition.z;
+    // packetData.pos.x = targetPosition.x;
+    // packetData.pos.y = targetPosition.y;
+    // packetData.pos.z = targetPosition.z;
+    // positition.x = targetPosition.x;
+    // positition.y = targetPosition.y;
+    // positition.z = targetPosition.z;
 
     switch (droneCmd)
     {
@@ -248,6 +276,8 @@ void appMain()
         break;
       case 5: // trigger
         // lastReceivedDroneId = prevDroneId;
+        packetData.ctr = droneAmount;
+        mustSend = true;
         break;
       case 10: // debug
         consolePrintf("%s\n", "##############");
@@ -293,14 +323,14 @@ void appMain()
         break;
       case debug1:
         communicate();
-        if (checkDistances())
-        {
-          ledSetAll();
-        }
-        else
-        {
-          ledClearAll();
-        }
+        // if (checkDistances())
+        // {
+        //   ledSetAll();
+        // }
+        // else
+        // {
+        //   ledClearAll();
+        // }
         break;
       case debug2:
         break;

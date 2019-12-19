@@ -18,4 +18,5 @@ uris = {
 }
 
 if __name__ == '__main__':
-    print(type((0xff, 0x80, 0x63, 0x01)))
+    for i in range(0, 100):
+        print(f"{i} = {i/10}")

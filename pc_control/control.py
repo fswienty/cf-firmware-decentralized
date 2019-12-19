@@ -19,29 +19,44 @@ def init_swarm(swarm):
     for uri in swarm._cfs.keys():
         amount = len(uris)
         droneId = int(uri[-1])
-        triggerIdIndex = available_drones.index(droneId)
-        if triggerIdIndex == 0:
-            triggerIdIndex = len(available_drones) - 1
-        else:
-            triggerIdIndex -= 1
-        triggerId = available_drones[triggerIdIndex]
 
-        args_dict[uri] = [amount, droneId, triggerId]
+        # prevIdIndex = available_drones.index(droneId)
+        # if prevIdIndex == 0:
+        #     prevIdIndex = len(available_drones) - 1
+        # else:
+        #     prevIdIndex -= 1
+        # prevId = available_drones[prevIdIndex]
+
+        # nextIdIndex = available_drones.index(droneId)
+        # if nextIdIndex == len(available_drones) - 1:
+        #     nextIdIndex = 0
+        # else:
+        #     nextIdIndex += 1
+        # nextId = available_drones[nextIdIndex]
+
+        ctr = available_drones.index(droneId)
+
+        args_dict[uri] = [amount, droneId, ctr]
     swarm.parallel_safe(init_drone, args_dict=args_dict)
 
 
-def init_drone(scf, amount, droneId, triggerId):
+def init_drone(scf, amount, droneId, ctr):
     time.sleep(0.2)
     func.set_param(scf, 'drone.amount', amount)
     time.sleep(0.2)
     func.set_param(scf, 'drone.id', droneId)
-    time.sleep(0.2)
-    func.set_param(scf, 'drone.triggerId', triggerId)
+    # time.sleep(0.2)
+    # func.set_param(scf, 'drone.prevId', prevId)
+    # time.sleep(0.2)
+    # func.set_param(scf, 'drone.nextId', nextId)
+    # time.sleep(0.2)
+    # func.set_param(scf, 'drone.ctr', ctr)
     time.sleep(0.2)
     func.set_param(scf, 'drone.cmd', 100)
     time.sleep(0.2)
     func.get_param(scf, 'dbg.chr')
-    print(f"Initialized drone nr {droneId}, prev drone: {triggerId}")
+    # print(f"Initialized drone nr {droneId}, prevId: {prevId}, nextId: {nextId}")
+    print(f"Initialized drone nr {droneId}")
 
 
 def comm(scf):
