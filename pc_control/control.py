@@ -60,6 +60,14 @@ def init_drone(scf, amount, droneId):
     print(f"Initialized drone nr {droneId}")
 
 
+def start(scf):
+    func.set_param(scf, 'drone.cmd', 1)
+
+
+def land(scf):
+    func.set_param(scf, 'drone.cmd', 2)
+
+
 def comm(scf):
     func.set_param(scf, 'drone.cmd', 3)
 
@@ -79,6 +87,8 @@ def debug(scf):
 uris = {
     'radio://0/80/2M/E7E7E7E7E4',
     'radio://0/80/2M/E7E7E7E7E9',
+    # 'radio://0/80/2M/E7E7E7E7E1',
+    # 'radio://0/80/2M/E7E7E7E7E0',
 }
 
 
@@ -89,7 +99,7 @@ if __name__ == '__main__':
     factory = CachedCfFactory(rw_cache='./cache')
 
     with Swarm(uris, factory=factory) as swarm:
-        # swarm.parallel(func.reset_estimator)
+        swarm.parallel(func.reset_estimator)
         print('Waiting for parameters to be downloaded...')
         swarm.parallel(func.wait_for_param_download)
         init_swarm(swarm)
@@ -144,6 +154,18 @@ if __name__ == '__main__':
                         swarm.parallel_safe(func.get_param, args_dict=args_dict)
                     else:
                         func.get_param(crazyflie, args[2])
+
+                elif action == "start" and len(args) == 2:  # usage: [crazyflie] start
+                    if crazyflie == "all":
+                        swarm.parallel_safe(start, args_dict=args_dict)
+                    else:
+                        start(crazyflie)
+
+                elif action == "land" and len(args) == 2:  # usage: [crazyflie] land
+                    if crazyflie == "all":
+                        swarm.parallel_safe(land, args_dict=args_dict)
+                    else:
+                        land(crazyflie)
 
                 elif action == "comm" and len(args) == 2:  # usage: [crazyflie] comm
                     if crazyflie == "all":

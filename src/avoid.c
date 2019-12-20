@@ -26,6 +26,10 @@
 
 #define OTHERDRONESAMOUNT 10  // size of the array containing the positions of other drones. must be at least as high as the highest id among all drones plus one.
 #define DUMMYPOSITION 99999  // the xyz coordinates of non-connected drones will be set to this value
+#define FORCEFALLOFFDISTANCE 1.0f
+#define TARGETFORCE 1.0f
+#define AVOIDANCERANGE 0.3f
+#define AVOIDANCEFORCE 1.0f
 
 //#define DEBUG_MODULE "PUSH
 
@@ -73,7 +77,7 @@ void p2pCallbackHandler(P2PPacket *p)
   PacketData receivedPacketData;
   memcpy(&receivedPacketData, p->data, sizeof(PacketData));
   otherPositions[receivedPacketData.id] = receivedPacketData.pos;
-  // consolePrintf("%d rec pkt: id=%d\n", packetData.id, receivedPacketData.id);
+  // consolePrintf("%d <- id=%d\n", packetData.id, receivedPacketData.id);
 }
 
 static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
@@ -91,7 +95,6 @@ static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
 
 static bool checkDistances()
 {
-  // consolePrintf("Drone %d checks its distances", packetData.id);
   Vector3 dronePosition = packetData.pos;
   bool otherIsClose = false;
   for (int i = 0; i < OTHERDRONESAMOUNT; i++)
@@ -122,6 +125,49 @@ static void approachTarget(setpoint_t *sp)
   setHoverSetpoint(sp, waypoint.x, waypoint.y, waypoint.z);
 }
 
+static bool approachTargetAvoidOthers(setpoint_t *sp)
+{
+  Vector3 dronePosition = packetData.pos;
+  Vector3 sum = (Vector3){0, 0, 0};
+  bool isAvoiding = false;
+
+  // target stuff
+  Vector3 droneToTarget = sub(dronePosition, targetPosition);
+  if(magnitude(droneToTarget) > FORCEFALLOFFDISTANCE)
+  {
+    droneToTarget = norm(droneToTarget);
+  }
+  else
+  {
+    droneToTarget = mul(droneToTarget, 1 / FORCEFALLOFFDISTANCE);
+  }
+  droneToTarget = mul(droneToTarget, TARGETFORCE);
+  sum = add(sum, droneToTarget);
+
+  // other drones stuff
+  for (int i = 0; i < OTHERDRONESAMOUNT; i++)
+  {
+    // if (otherPositions[i].x == DUMMYPOSITION)
+    // {
+    //   continue;
+    // }
+    Vector3 otherToDrone = sub(otherPositions[i], dronePosition);
+    if(magnitude(otherToDrone) > AVOIDANCERANGE)
+    {
+      continue;
+    }
+    float invDistance = AVOIDANCERANGE - magnitude(otherToDrone);
+    otherToDrone = norm(otherToDrone);
+    otherToDrone = mul(otherToDrone, invDistance);
+    sum = add(sum, otherToDrone);
+    isAvoiding = true;
+  }
+
+  sum = add(dronePosition, sum);
+  setHoverSetpoint(sp, sum.x, sum.y, sum.z);
+  return isAvoiding;
+}
+
 static void moveVertical(setpoint_t *sp, float zVelocity)
 {
   sp->mode.x = modeVelocity;
@@ -149,6 +195,7 @@ void appMain()
   static point_t kalmanPosition;
   static setpoint_t setpoint;
   static State state = uninitialized;
+  bool isAvoiding = false;
 
   // drone.cmd value meanings:
   // 100: used to trigger initialization
@@ -268,6 +315,7 @@ void appMain()
       case uninitialized: // this case should never occur since the drone should have been initialized before the switch statement
       case enginesOff:
       default:
+        ledClearAll();
         shutOffEngines(&setpoint);
         break;
       case starting:
@@ -289,7 +337,15 @@ void appMain()
         break;
       case flying:
         communicate();
-        approachTarget(&setpoint);
+        isAvoiding = approachTargetAvoidOthers(&setpoint);
+        if (isAvoiding)
+        {
+          ledSetAll();
+        }
+        else
+        {
+          ledClearAll();
+        }
         break;
       case debug1:
         communicate();
