@@ -219,12 +219,12 @@ void appMain()
 
     // put kalman position in this drone's packetData struct
     estimatorKalmanGetEstimatedPos(&kalmanPosition);
-    // packetData.pos.x = kalmanPosition.x;
-    // packetData.pos.y = kalmanPosition.y;
-    // packetData.pos.z = kalmanPosition.z;
-    packetData.pos.x = targetPosition.x;
-    packetData.pos.y = targetPosition.y;
-    packetData.pos.z = targetPosition.z;
+    packetData.pos.x = kalmanPosition.x;
+    packetData.pos.y = kalmanPosition.y;
+    packetData.pos.z = kalmanPosition.z;
+    // packetData.pos.x = targetPosition.x;
+    // packetData.pos.y = targetPosition.y;
+    // packetData.pos.z = targetPosition.z;
 
     switch (droneCmd)
     {

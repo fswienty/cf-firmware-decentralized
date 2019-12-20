@@ -6,6 +6,7 @@ import helperFunctions as func
 import cflib.crtp
 from cflib.crazyflie.swarm import CachedCfFactory
 from cflib.crazyflie.swarm import Swarm
+# from cflib.crazyflie.console import Console
 
 
 def init_swarm(swarm):
@@ -34,13 +35,13 @@ def init_swarm(swarm):
         #     nextIdIndex += 1
         # nextId = available_drones[nextIdIndex]
 
-        ctr = available_drones.index(droneId)
+        # ctr = available_drones.index(droneId)
 
-        args_dict[uri] = [amount, droneId, ctr]
+        args_dict[uri] = [amount, droneId]
     swarm.parallel_safe(init_drone, args_dict=args_dict)
 
 
-def init_drone(scf, amount, droneId, ctr):
+def init_drone(scf, amount, droneId):
     time.sleep(0.2)
     func.set_param(scf, 'drone.amount', amount)
     time.sleep(0.2)
