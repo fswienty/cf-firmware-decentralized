@@ -1,7 +1,7 @@
 import sys
 import time
 
-import helperFunctions as func
+import helperFunctions as helpFun
 
 import cflib.crtp
 from cflib.crazyflie.swarm import CachedCfFactory
@@ -42,51 +42,58 @@ def init_swarm(swarm):
 
 
 def init_drone(scf, amount, droneId):
+    helpFun.set_param(scf, 'drone.amount', amount)
     time.sleep(0.2)
-    func.set_param(scf, 'drone.amount', amount)
-    time.sleep(0.2)
-    func.set_param(scf, 'drone.id', droneId)
+    helpFun.set_param(scf, 'drone.id', droneId)
     # time.sleep(0.2)
-    # func.set_param(scf, 'drone.prevId', prevId)
+    # helpFun.set_param(scf, 'drone.prevId', prevId)
     # time.sleep(0.2)
-    # func.set_param(scf, 'drone.nextId', nextId)
+    # helpFun.set_param(scf, 'drone.nextId', nextId)
     # time.sleep(0.2)
-    # func.set_param(scf, 'drone.ctr', ctr)
+    # helpFun.set_param(scf, 'drone.ctr', ctr)
     time.sleep(0.2)
-    func.set_param(scf, 'drone.cmd', 100)
+    helpFun.set_param(scf, 'drone.cmd', 100)
     time.sleep(0.2)
-    func.get_param(scf, 'dbg.chr')
+    helpFun.get_param(scf, 'dbg.chr')
     # print(f"Initialized drone nr {droneId}, prevId: {prevId}, nextId: {nextId}")
     print(f"Initialized drone nr {droneId}")
 
 
+def set_target(scf, x, y, z):
+    helpFun.set_param(scf, 'drone.targetX', x)
+    time.sleep(0.2)
+    helpFun.set_param(scf, 'drone.targetY', y)
+    time.sleep(0.2)
+    helpFun.set_param(scf, 'drone.targetZ', z)
+
+
 def start(scf):
-    func.set_param(scf, 'drone.cmd', 1)
+    helpFun.set_param(scf, 'drone.cmd', 1)
 
 
 def land(scf):
-    func.set_param(scf, 'drone.cmd', 2)
+    helpFun.set_param(scf, 'drone.cmd', 2)
 
 
 def comm(scf):
-    func.set_param(scf, 'drone.cmd', 3)
+    helpFun.set_param(scf, 'drone.cmd', 3)
 
 
 def idle(scf):
-    func.set_param(scf, 'drone.cmd', 4)
+    helpFun.set_param(scf, 'drone.cmd', 4)
 
 
 def trigger(scf):
-    func.set_param(scf, 'drone.cmd', 5)
+    helpFun.set_param(scf, 'drone.cmd', 5)
 
 
 def debug(scf):
-    func.set_param(scf, 'drone.cmd', 10)
+    helpFun.set_param(scf, 'drone.cmd', 10)
 
 
 uris = {
     'radio://0/80/2M/E7E7E7E7E4',
-    'radio://0/80/2M/E7E7E7E7E9',
+    # 'radio://0/80/2M/E7E7E7E7E9',
     # 'radio://0/80/2M/E7E7E7E7E1',
     # 'radio://0/80/2M/E7E7E7E7E0',
 }
@@ -99,17 +106,16 @@ if __name__ == '__main__':
     factory = CachedCfFactory(rw_cache='./cache')
 
     with Swarm(uris, factory=factory) as swarm:
-        swarm.parallel(func.reset_estimator)
+        # swarm.parallel(helpFun.reset_estimator)
         print('Waiting for parameters to be downloaded...')
-        swarm.parallel(func.wait_for_param_download)
+        swarm.parallel(helpFun.wait_for_param_download)
         init_swarm(swarm)
         print("###################################")
 
         while True:
-            inp = input()
-            args = inp.split()
+            inp = input().split()
 
-            if args[0] == "quit":
+            if inp[0] == "quit":
                 swarm.close_links()
                 time.sleep(0.2)
                 print("Program quit")
@@ -117,82 +123,60 @@ if __name__ == '__main__':
 
             # the scf object of the crazyflie that should execute some action, or "all"
             crazyflie = None
-            if args[0] == "all":
+            if inp[0] == "all":
                 crazyflie = "all"
             else:
                 for uri in swarm._cfs.keys():
-                    if uri[-1] is args[0]:
+                    if uri[-1] is inp[0]:
                         crazyflie = swarm._cfs[uri]
             if crazyflie is None:
-                print(f"Crazyflie number {args[0]} is not connected. Use a valid number (0-9) or \"all\" to address all crazyflies.")
+                print(f"Crazyflie number {inp[0]} is not connected. Use a valid number (0-9) or \"all\" to address all crazyflies.")
                 continue
 
             # the action that the crazyflie(s) should execute
             action = ""
             try:
-                action = args[1]
+                action = inp[1]
             except:
                 print("Arguments missing")
                 continue
 
             # the args_dict contains all remaining arguments, keyed with the appropriate uri(s)
+            # args is a list with all remaining arguments
             args_dict = {}
+            args = inp[2:]
             if crazyflie == "all":
                 for uri in swarm._cfs.keys():
-                    args_dict[uri] = args[2:]
+                    args_dict[uri] = args
 
-            # Execution of commands
+            # setting desired function
+            function = None
+            if action == "set" and len(args) == 2:  # usage: [crazyflie] set [group.name] [value]
+                function = helpFun.set_param
+            elif action == "get" and len(args) == 1:  # usage: [crazyflie] get [group.name]
+                function = helpFun.get_param
+            elif action == "start" and len(args) == 0:  # usage: [crazyflie] start
+                function = start
+            elif action == "land" and len(args) == 0:  # usage: [crazyflie] land
+                function = land
+            elif action == "comm" and len(args) == 0:  # usage: [crazyflie] comm
+                function = comm
+            elif action == "idle" and len(args) == 0:  # usage: [crazyflie] idle
+                function = idle
+            elif action == "trigger" and len(args) == 0:  # usage: [crazyflie] trigger
+                function = trigger
+            elif action == "debug" and len(args) == 0:  # usage: [crazyflie] debug
+                function = debug
+            else:
+                print("Invalid command")
+                continue
+
+            # execution of commands
             try:
-                if action == "set" and len(args) == 4:  # usage: [crazyflie] set [group.name] [value]
-                    if crazyflie == "all":
-                        swarm.parallel_safe(func.set_param, args_dict=args_dict)
-                    else:
-                        func.set_param(crazyflie, args[2], args[3])
-
-                elif action == "get" and len(args) == 3:  # usage: [crazyflie] get [group.name]
-                    if crazyflie == "all":
-                        swarm.parallel_safe(func.get_param, args_dict=args_dict)
-                    else:
-                        func.get_param(crazyflie, args[2])
-
-                elif action == "start" and len(args) == 2:  # usage: [crazyflie] start
-                    if crazyflie == "all":
-                        swarm.parallel_safe(start, args_dict=args_dict)
-                    else:
-                        start(crazyflie)
-
-                elif action == "land" and len(args) == 2:  # usage: [crazyflie] land
-                    if crazyflie == "all":
-                        swarm.parallel_safe(land, args_dict=args_dict)
-                    else:
-                        land(crazyflie)
-
-                elif action == "comm" and len(args) == 2:  # usage: [crazyflie] comm
-                    if crazyflie == "all":
-                        swarm.parallel_safe(comm, args_dict=args_dict)
-                    else:
-                        comm(crazyflie)
-
-                elif action == "idle" and len(args) == 2:  # usage: [crazyflie] idle
-                    if crazyflie == "all":
-                        swarm.parallel_safe(idle, args_dict=args_dict)
-                    else:
-                        idle(crazyflie)
-
-                elif action == "trigger" and len(args) == 2:  # usage: [crazyflie] trigger
-                    if crazyflie == "all":
-                        swarm.parallel_safe(trigger, args_dict=args_dict)
-                    else:
-                        trigger(crazyflie)
-
-                elif action == "debug" and len(args) == 2:  # usage: [crazyflie] debug
-                    if crazyflie == "all":
-                        swarm.parallel_safe(debug, args_dict=args_dict)
-                    else:
-                        debug(crazyflie)
-
+                if crazyflie == "all":
+                    swarm.parallel_safe(function, args_dict=args_dict)
                 else:
-                    print("Invalid command")
+                    function(crazyflie, *args)
             except:
                 print("Exeption occured")
         else:

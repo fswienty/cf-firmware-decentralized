@@ -35,6 +35,5 @@ float magnitude(Vector3 vec3)
 
 Vector3 norm(Vector3 vec3)
 {
-    float magInv = 1 / magnitude(vec3);
-    return mul(vec3, magInv);
+    return mul(vec3, 1 / magnitude(vec3));
 }

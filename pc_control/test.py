@@ -12,11 +12,18 @@ from cflib.crazyflie.syncLogger import SyncLogger
 from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 
-uris = {
-    'radio://0/80/2M/E7E7E7E7E4',
-    'radio://0/80/2M/E7E7E7E7E9'
-}
+
+def testFun(arg1):
+    print(f"{arg1}")
+
 
 if __name__ == '__main__':
-    for i in range(0, 100):
-        print(f"{i} = {i/10}")
+    dic = {
+        1: "benis",
+        2: "lul",
+        3: "ayy",
+    }
+    print(type(dic))
+    print(dic)
+    print(dic.keys())
+    print(dic.values())

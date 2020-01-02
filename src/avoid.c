@@ -24,12 +24,12 @@
 #define MAX(a, b) ((a > b) ? a : b)
 #define MIN(a, b) ((a < b) ? a : b)
 
-#define OTHERDRONESAMOUNT 10  // size of the array containing the positions of other drones. must be at least as high as the highest id among all drones plus one.
-#define DUMMYPOSITION 99999  // the xyz coordinates of non-connected drones will be set to this value
-#define FORCEFALLOFFDISTANCE 1.0f
-#define TARGETFORCE 1.0f
-#define AVOIDANCERANGE 0.3f
-#define AVOIDANCEFORCE 1.0f
+#define OTHER_DRONES_ARRAY_SIZE 10  // size of the array containing the positions of other drones. must be at least as high as the highest id among all drones plus one.
+#define DUMMY_POSITION 99999  // the xyz coordinates of non-connected drones will be set to this value
+#define FORCE_FALLOFF_DISTANCE 1.0f
+#define TARGET_FORCE 1.0f
+#define AVOIDANCE_RANGE 0.3f
+#define AVOIDANCE_FORCE 1.0f
 
 //#define DEBUG_MODULE "PUSH
 
@@ -54,7 +54,7 @@ typedef struct _PacketData
 
 static PacketData packetData;  // oi
 static Vector3 targetPosition;  // this drones's target position
-static Vector3 otherPositions[OTHERDRONESAMOUNT];  // array of the positions of the other drones
+static Vector3 otherPositions[OTHER_DRONES_ARRAY_SIZE];  // array of the positions of the other drones
 static uint8_t lastReceivedDroneId;  // id of the last received packetData
 static uint8_t droneAmount;  // amount of drones. SET DURING INITIALIZATION, DON'T CHANGE AT RUNTIME.
 static uint8_t timer;
@@ -97,10 +97,10 @@ static bool checkDistances()
 {
   Vector3 dronePosition = packetData.pos;
   bool otherIsClose = false;
-  for (int i = 0; i < OTHERDRONESAMOUNT; i++)
+  for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
   {
     // Vector3 otherPosition = otherPositions[i];
-    if (otherPositions[i].x == DUMMYPOSITION)
+    if (otherPositions[i].x == DUMMY_POSITION)
     {
       continue;
     }
@@ -133,30 +133,26 @@ static bool approachTargetAvoidOthers(setpoint_t *sp)
 
   // target stuff
   Vector3 droneToTarget = sub(dronePosition, targetPosition);
-  if(magnitude(droneToTarget) > FORCEFALLOFFDISTANCE)
+  if(magnitude(droneToTarget) > FORCE_FALLOFF_DISTANCE)
   {
     droneToTarget = norm(droneToTarget);
   }
   else
   {
-    droneToTarget = mul(droneToTarget, 1 / FORCEFALLOFFDISTANCE);
+    droneToTarget = mul(droneToTarget, 1 / FORCE_FALLOFF_DISTANCE);
   }
-  droneToTarget = mul(droneToTarget, TARGETFORCE);
+  droneToTarget = mul(droneToTarget, TARGET_FORCE);
   sum = add(sum, droneToTarget);
 
-  // other drones stuff
-  for (int i = 0; i < OTHERDRONESAMOUNT; i++)
+  // other drones stuff (maybe quit early if otherPositions[i].x == DUMMY_POSITION?)
+  for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
   {
-    // if (otherPositions[i].x == DUMMYPOSITION)
-    // {
-    //   continue;
-    // }
     Vector3 otherToDrone = sub(otherPositions[i], dronePosition);
-    if(magnitude(otherToDrone) > AVOIDANCERANGE)
+    if(magnitude(otherToDrone) > AVOIDANCE_RANGE)
     {
       continue;
     }
-    float invDistance = AVOIDANCERANGE - magnitude(otherToDrone);
+    float invDistance = AVOIDANCE_RANGE - magnitude(otherToDrone);
     otherToDrone = norm(otherToDrone);
     otherToDrone = mul(otherToDrone, invDistance);
     sum = add(sum, otherToDrone);
@@ -253,9 +249,9 @@ void appMain()
         timer = 0;
 
         // put PacketData structs with out of bounds values into the otherPositions array
-        for (int i = 0; i < OTHERDRONESAMOUNT; i++)
+        for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
         {
-          otherPositions[i] = (Vector3){DUMMYPOSITION, DUMMYPOSITION, DUMMYPOSITION};
+          otherPositions[i] = (Vector3){DUMMY_POSITION, DUMMY_POSITION, DUMMY_POSITION};
         }
         dbgchr = packetData.id;
         state = enginesOff;
