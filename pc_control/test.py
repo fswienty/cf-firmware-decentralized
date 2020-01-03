@@ -1,5 +1,7 @@
 import sys
 import time
+import numpy as np
+import os
 
 import helperFunctions as func
 
@@ -18,12 +20,12 @@ def testFun(arg1):
 
 
 if __name__ == '__main__':
-    dic = {
-        1: "benis",
-        2: "lul",
-        3: "ayy",
-    }
-    print(type(dic))
-    print(dic)
-    print(dic.keys())
-    print(dic.values())
+    print("#################")
+    name = "2_circle"
+    path = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(path, "formations")
+    path = os.path.join(path, f"{name}.csv")
+    print(path)
+    formation = np.loadtxt(path, delimiter=",")
+    print(formation[1])
+    # formation = np.loadtxt(path, delimiter=",")

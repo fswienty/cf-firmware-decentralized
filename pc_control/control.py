@@ -1,5 +1,7 @@
 import sys
 import time
+import os
+import numpy as np
 
 import helperFunctions as helpFun
 
@@ -59,6 +61,14 @@ def init_drone(scf, amount, droneId):
     print(f"Initialized drone nr {droneId}")
 
 
+def set_formation(scf, formation):
+    helpFun.set_param(scf, 'drone.targetX', x)
+    time.sleep(0.2)
+    helpFun.set_param(scf, 'drone.targetY', y)
+    time.sleep(0.2)
+    helpFun.set_param(scf, 'drone.targetZ', z)
+
+
 def set_target(scf, x, y, z):
     helpFun.set_param(scf, 'drone.targetX', x)
     time.sleep(0.2)
@@ -93,7 +103,7 @@ def debug(scf):
 
 uris = {
     'radio://0/80/2M/E7E7E7E7E4',
-    # 'radio://0/80/2M/E7E7E7E7E9',
+    'radio://0/80/2M/E7E7E7E7E9',
     # 'radio://0/80/2M/E7E7E7E7E1',
     # 'radio://0/80/2M/E7E7E7E7E0',
 }
@@ -120,6 +130,31 @@ if __name__ == '__main__':
                 time.sleep(0.2)
                 print("Program quit")
                 sys.exit(0)
+            elif inp[0] == "formation" and len(inp) == 2:  # usage: [crazyflie] formation [formation name] (please only use with [crazyflie] == "all")
+                # TODO check formation size vs available drones
+
+                formation_name = inp[1]
+                # load formation
+                path = os.path.dirname(os.path.abspath(__file__))
+                path = os.path.join(path, "formations")
+                path = os.path.join(path, f"{formation_name}.csv")
+                try:
+                    formation = np.loadtxt(path, delimiter=",")
+                except:
+                    print(f"Formation {formation_name} not found")
+                    continue
+                formation
+
+                # construct args_dict
+                args_dict = {}
+                available_uris = list(swarm._cfs)
+                print(available_uris)
+                for i in range(0, len(available_uris)):
+                    args_dict[available_uris[i]] = [formation[i][0], formation[i][1], formation[i][2]]
+                print(args_dict)
+                print(f"Setting formation {formation_name}")
+                swarm.parallel_safe(set_target, args_dict=args_dict)
+                continue
 
             # the scf object of the crazyflie that should execute some action, or "all"
             crazyflie = None
@@ -167,6 +202,8 @@ if __name__ == '__main__':
                 function = trigger
             elif action == "debug" and len(args) == 0:  # usage: [crazyflie] debug
                 function = debug
+            elif action == "target" and len(args) == 3:  # usage: [crazyflie] target [x] [y] [z]
+                function = set_target
             else:
                 print("Invalid command")
                 continue

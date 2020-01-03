@@ -293,13 +293,10 @@ void appMain()
         // lastReceivedDroneId = prevDroneId;
         break;
       case 10: // debug
-        consolePrintf("%s\n", "##############");
-        consolePrintf("Drone %d info:\n", packetData.id);
-        consolePrintf("pos x: %.2f y: %.2f z: %.2f\n", packetData.pos.x, packetData.pos.y, packetData.pos.z);
-        consolePrintf("target x: %.2f y: %.2f z: %.2f\n", targetPosition.x, targetPosition.y, targetPosition.z);
+        // consolePrintf("%s\n", "##############");
+        consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, targetPosition.x, targetPosition.y, targetPosition.z);
         // consolePrintf("triggerId: %d\n", prevDroneId);
         // consolePrintf("receivedId: %d\n", lastReceivedDroneId);
-        consolePrintf("%s\n", "##############");
         break;
       default:
         break;
