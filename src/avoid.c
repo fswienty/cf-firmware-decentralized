@@ -28,7 +28,7 @@
 #define DUMMY_POSITION 99999  // the xyz coordinates of non-connected drones will be set to this value
 #define FORCE_FALLOFF_DISTANCE 1.0f
 #define TARGET_FORCE 1.0f
-#define AVOIDANCE_RANGE 0.3f
+#define AVOIDANCE_RANGE 0.5f
 #define AVOIDANCE_FORCE 1.0f
 
 //#define DEBUG_MODULE "PUSH
@@ -114,17 +114,6 @@ static bool checkDistances()
   return otherIsClose;
 }
 
-static void approachTarget(setpoint_t *sp)
-{
-  Vector3 dronePosition = packetData.pos;
-  Vector3 droneToTarget = sub(dronePosition, targetPosition);
-  float distance = magnitude(droneToTarget);
-  distance = MIN(distance, 0.2f);
-  droneToTarget = norm(droneToTarget);
-  Vector3 waypoint = add(dronePosition, mul(droneToTarget, distance));
-  setHoverSetpoint(sp, waypoint.x, waypoint.y, waypoint.z);
-}
-
 static bool approachTargetAvoidOthers(setpoint_t *sp)
 {
   Vector3 dronePosition = packetData.pos;
@@ -152,9 +141,10 @@ static bool approachTargetAvoidOthers(setpoint_t *sp)
     {
       continue;
     }
-    float invDistance = AVOIDANCE_RANGE - magnitude(otherToDrone);
+    float invDistance = 1 - magnitude(otherToDrone) / AVOIDANCE_RANGE;
     otherToDrone = norm(otherToDrone);
     otherToDrone = mul(otherToDrone, invDistance);
+    otherToDrone = mul(otherToDrone, AVOIDANCE_FORCE);
     sum = add(sum, otherToDrone);
     isAvoiding = true;
   }

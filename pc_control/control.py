@@ -103,7 +103,7 @@ def debug(scf):
 
 uris = {
     'radio://0/80/2M/E7E7E7E7E4',
-    'radio://0/80/2M/E7E7E7E7E9',
+    # 'radio://0/80/2M/E7E7E7E7E9',
     # 'radio://0/80/2M/E7E7E7E7E1',
     # 'radio://0/80/2M/E7E7E7E7E0',
 }
@@ -116,7 +116,7 @@ if __name__ == '__main__':
     factory = CachedCfFactory(rw_cache='./cache')
 
     with Swarm(uris, factory=factory) as swarm:
-        # swarm.parallel(helpFun.reset_estimator)
+        swarm.parallel(helpFun.reset_estimator)
         print('Waiting for parameters to be downloaded...')
         swarm.parallel(helpFun.wait_for_param_download)
         init_swarm(swarm)
@@ -130,7 +130,7 @@ if __name__ == '__main__':
                 time.sleep(0.2)
                 print("Program quit")
                 sys.exit(0)
-            elif inp[0] == "formation" and len(inp) == 2:  # usage: [crazyflie] formation [formation name] (please only use with [crazyflie] == "all")
+            elif inp[0] == "formation" and len(inp) == 2:  # usage: formation [formation name (without the ".csv")]
                 # TODO check formation size vs available drones
 
                 formation_name = inp[1]
@@ -143,15 +143,24 @@ if __name__ == '__main__':
                 except:
                     print(f"Formation {formation_name} not found")
                     continue
-                formation
 
                 # construct args_dict
-                args_dict = {}
                 available_uris = list(swarm._cfs)
-                print(available_uris)
-                for i in range(0, len(available_uris)):
+                formation_size = np.size(formation, 0)
+                available_drones = len(available_uris)
+                max_iterator = formation_size  # Normally, formation_size and available_drones has the same value, so just use one of them here.
+                if formation_size < available_drones:
+                    print(f"Formation {formation_name} requires {formation_size} drones, but there are {available_drones} available. Some drones will remain stationary.")
+                    max_iterator = formation_size
+                elif formation_size > available_drones:
+                    print(f"Formation {formation_name} requires {formation_size} drones, but there are only {available_drones} available. Some places in the formation will not be occupied.")
+                    max_iterator = available_drones
+                args_dict = {}
+                for i in range(0, max_iterator):
                     args_dict[available_uris[i]] = [formation[i][0], formation[i][1], formation[i][2]]
                 print(args_dict)
+
+                # set formation
                 print(f"Setting formation {formation_name}")
                 swarm.parallel_safe(set_target, args_dict=args_dict)
                 continue
