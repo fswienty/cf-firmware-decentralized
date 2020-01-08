@@ -11,14 +11,14 @@ from cflib.crazyflie.swarm import Swarm
 # from cflib.crazyflie.console import Console
 
 
-forceFalloffDistance = 1.0
+forceFalloff = 1.0
 targetForce = 1.0
-avoidanceRange = 0.5
-avoidanceForce = 1.0
+avoidRange = 0.5
+avoidForce = 1.0
 
 uris = {
-    'radio://0/80/2M/E7E7E7E7E4',
-    # 'radio://0/80/2M/E7E7E7E7E9',
+    # 'radio://0/80/2M/E7E7E7E7E4',
+    'radio://0/80/2M/E7E7E7E7E9',
     # 'radio://0/80/2M/E7E7E7E7E1',
     # 'radio://0/80/2M/E7E7E7E7E0',
 }
@@ -61,13 +61,13 @@ def init_drone(scf, amount, droneId):
     time.sleep(0.2)
     helpFun.set_param(scf, 'drone.id', droneId)
     time.sleep(0.2)
-    helpFun.set_param(scf, 'drone.forceFalloffDistance', forceFalloffDistance)
+    helpFun.set_param(scf, 'drone.forceFalloff', forceFalloff)
     time.sleep(0.2)
     helpFun.set_param(scf, 'drone.targetForce', targetForce)
     time.sleep(0.2)
-    helpFun.set_param(scf, 'drone.avoidanceRange', avoidanceRange)
+    helpFun.set_param(scf, 'drone.avoidRange', avoidRange)
     time.sleep(0.2)
-    helpFun.set_param(scf, 'drone.avoidanceForce', avoidanceForce)
+    helpFun.set_param(scf, 'drone.avoidForce', avoidForce)
     # time.sleep(0.2)
     # helpFun.set_param(scf, 'drone.prevId', prevId)
     # time.sleep(0.2)
@@ -83,7 +83,7 @@ def init_drone(scf, amount, droneId):
 
 
 def set_formation(swarm, formation):
-    
+    pass
 
 
 if __name__ == '__main__':

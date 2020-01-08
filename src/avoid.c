@@ -51,7 +51,7 @@ typedef struct _PacketData
 static PacketData packetData;  // oi
 static Vector3 targetPosition;  // this drones's target position
 static Vector3 otherPositions[OTHER_DRONES_ARRAY_SIZE];  // array of the positions of the other drones
-static uint8_t lastReceivedDroneId;  // id of the last received packetData
+// static uint8_t lastReceivedDroneId;  // id of the last received packetData
 static uint8_t droneAmount;  // amount of drones. SET DURING INITIALIZATION, DON'T CHANGE AT RUNTIME.
 static uint8_t timer;
 static float forceFalloffDistance;
@@ -182,7 +182,7 @@ void appMain()
   static setpoint_t setpoint;
   static State state = uninitialized;
   bool isAvoiding = false;
-  timer = 0;
+  // timer = 0;
 
   // drone.cmd value meanings:
   // 1:   start
@@ -203,10 +203,10 @@ void appMain()
   PARAM_ADD(PARAM_FLOAT, targetX, &targetPosition.x)
   PARAM_ADD(PARAM_FLOAT, targetY, &targetPosition.y)
   PARAM_ADD(PARAM_FLOAT, targetZ, &targetPosition.z)
-  PARAM_ADD(PARAM_FLOAT, forceFalloffDistance, &forceFalloffDistance)
+  PARAM_ADD(PARAM_FLOAT, forceFalloff, &forceFalloffDistance)
   PARAM_ADD(PARAM_FLOAT, targetForce, &targetForce)
-  PARAM_ADD(PARAM_FLOAT, avoidanceRange, &avoidanceRange)
-  PARAM_ADD(PARAM_FLOAT, avoidanceForce, &avoidanceForce)
+  PARAM_ADD(PARAM_FLOAT, avoidRange, &avoidanceRange)
+  PARAM_ADD(PARAM_FLOAT, avoidForce, &avoidanceForce)
   PARAM_GROUP_STOP(drone)
 
   // debug variables which can be written and read from the pc and the drone
