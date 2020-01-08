@@ -54,10 +54,10 @@ static Vector3 otherPositions[OTHER_DRONES_ARRAY_SIZE];  // array of the positio
 // static uint8_t lastReceivedDroneId;  // id of the last received packetData
 static uint8_t droneAmount;  // amount of drones. SET DURING INITIALIZATION, DON'T CHANGE AT RUNTIME.
 static uint8_t timer;
-static float forceFalloffDistance;
+static float forceFalloff;
 static float targetForce;
-static float avoidanceRange;
-static float avoidanceForce;
+static float avoidRange;
+static float avoidForce;
 
 static void communicate()
 {
@@ -122,13 +122,13 @@ static bool approachTargetAvoidOthers(setpoint_t *sp)
 
   // target stuff
   Vector3 droneToTarget = sub(dronePosition, targetPosition);
-  if(magnitude(droneToTarget) > forceFalloffDistance)
+  if(magnitude(droneToTarget) > forceFalloff)
   {
     droneToTarget = norm(droneToTarget);
   }
   else
   {
-    droneToTarget = mul(droneToTarget, 1 / forceFalloffDistance);
+    droneToTarget = mul(droneToTarget, 1 / forceFalloff);
   }
   droneToTarget = mul(droneToTarget, targetForce);
   sum = add(sum, droneToTarget);
@@ -137,14 +137,14 @@ static bool approachTargetAvoidOthers(setpoint_t *sp)
   for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
   {
     Vector3 otherToDrone = sub(otherPositions[i], dronePosition);
-    if(magnitude(otherToDrone) > avoidanceRange)
+    if(magnitude(otherToDrone) > avoidRange)
     {
       continue;
     }
-    float invDistance = 1 - magnitude(otherToDrone) / avoidanceRange;
+    float invDistance = 1 - magnitude(otherToDrone) / avoidRange;
     otherToDrone = norm(otherToDrone);
     otherToDrone = mul(otherToDrone, invDistance);
-    otherToDrone = mul(otherToDrone, avoidanceForce);
+    otherToDrone = mul(otherToDrone, avoidForce);
     sum = add(sum, otherToDrone);
     isAvoiding = true;
   }
@@ -203,10 +203,10 @@ void appMain()
   PARAM_ADD(PARAM_FLOAT, targetX, &targetPosition.x)
   PARAM_ADD(PARAM_FLOAT, targetY, &targetPosition.y)
   PARAM_ADD(PARAM_FLOAT, targetZ, &targetPosition.z)
-  PARAM_ADD(PARAM_FLOAT, forceFalloff, &forceFalloffDistance)
+  PARAM_ADD(PARAM_FLOAT, forceFalloff, &forceFalloff)
   PARAM_ADD(PARAM_FLOAT, targetForce, &targetForce)
-  PARAM_ADD(PARAM_FLOAT, avoidRange, &avoidanceRange)
-  PARAM_ADD(PARAM_FLOAT, avoidForce, &avoidanceForce)
+  PARAM_ADD(PARAM_FLOAT, avoidRange, &avoidRange)
+  PARAM_ADD(PARAM_FLOAT, avoidForce, &avoidForce)
   PARAM_GROUP_STOP(drone)
 
   // debug variables which can be written and read from the pc and the drone
