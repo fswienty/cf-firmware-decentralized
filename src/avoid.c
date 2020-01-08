@@ -26,10 +26,6 @@
 
 #define OTHER_DRONES_ARRAY_SIZE 10  // size of the array containing the positions of other drones. must be at least as high as the highest id among all drones plus one.
 #define DUMMY_POSITION 99999  // the xyz coordinates of non-connected drones will be set to this value
-#define FORCE_FALLOFF_DISTANCE 1.0f
-#define TARGET_FORCE 1.0f
-#define AVOIDANCE_RANGE 0.5f
-#define AVOIDANCE_FORCE 1.0f
 
 //#define DEBUG_MODULE "PUSH
 
@@ -58,6 +54,10 @@ static Vector3 otherPositions[OTHER_DRONES_ARRAY_SIZE];  // array of the positio
 static uint8_t lastReceivedDroneId;  // id of the last received packetData
 static uint8_t droneAmount;  // amount of drones. SET DURING INITIALIZATION, DON'T CHANGE AT RUNTIME.
 static uint8_t timer;
+static float forceFalloffDistance;
+static float targetForce;
+static float avoidanceRange;
+static float avoidanceForce;
 
 static void communicate()
 {
@@ -122,29 +122,29 @@ static bool approachTargetAvoidOthers(setpoint_t *sp)
 
   // target stuff
   Vector3 droneToTarget = sub(dronePosition, targetPosition);
-  if(magnitude(droneToTarget) > FORCE_FALLOFF_DISTANCE)
+  if(magnitude(droneToTarget) > forceFalloffDistance)
   {
     droneToTarget = norm(droneToTarget);
   }
   else
   {
-    droneToTarget = mul(droneToTarget, 1 / FORCE_FALLOFF_DISTANCE);
+    droneToTarget = mul(droneToTarget, 1 / forceFalloffDistance);
   }
-  droneToTarget = mul(droneToTarget, TARGET_FORCE);
+  droneToTarget = mul(droneToTarget, targetForce);
   sum = add(sum, droneToTarget);
 
   // other drones stuff (maybe quit early if otherPositions[i].x == DUMMY_POSITION?)
   for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
   {
     Vector3 otherToDrone = sub(otherPositions[i], dronePosition);
-    if(magnitude(otherToDrone) > AVOIDANCE_RANGE)
+    if(magnitude(otherToDrone) > avoidanceRange)
     {
       continue;
     }
-    float invDistance = 1 - magnitude(otherToDrone) / AVOIDANCE_RANGE;
+    float invDistance = 1 - magnitude(otherToDrone) / avoidanceRange;
     otherToDrone = norm(otherToDrone);
     otherToDrone = mul(otherToDrone, invDistance);
-    otherToDrone = mul(otherToDrone, AVOIDANCE_FORCE);
+    otherToDrone = mul(otherToDrone, avoidanceForce);
     sum = add(sum, otherToDrone);
     isAvoiding = true;
   }
@@ -182,16 +182,20 @@ void appMain()
   static setpoint_t setpoint;
   static State state = uninitialized;
   bool isAvoiding = false;
+  timer = 0;
 
   // drone.cmd value meanings:
+  // 1:   start
+  // 2:   land
+  // 3:   debug1
+  // 4:   debug2
+  // 5:   trigger a drone to start the communication
+  // 6:   reset timer
   // 100: used to trigger initialization
-  // 1:  start
-  // 2:  land
-  // 3:  debug1
-  // 4:  debug2
-  // 5:  trigger a drone to start the communication
   // be careful not to use these values for something else
   static int8_t droneCmd = 0;
+
+  // parameters can be written from the pc and read by the drone
   PARAM_GROUP_START(drone)
   PARAM_ADD(PARAM_UINT8, amount, &droneAmount)
   PARAM_ADD(PARAM_UINT8, id, &packetData.id)
@@ -199,6 +203,10 @@ void appMain()
   PARAM_ADD(PARAM_FLOAT, targetX, &targetPosition.x)
   PARAM_ADD(PARAM_FLOAT, targetY, &targetPosition.y)
   PARAM_ADD(PARAM_FLOAT, targetZ, &targetPosition.z)
+  PARAM_ADD(PARAM_FLOAT, forceFalloffDistance, &forceFalloffDistance)
+  PARAM_ADD(PARAM_FLOAT, targetForce, &targetForce)
+  PARAM_ADD(PARAM_FLOAT, avoidanceRange, &avoidanceRange)
+  PARAM_ADD(PARAM_FLOAT, avoidanceForce, &avoidanceForce)
   PARAM_GROUP_STOP(drone)
 
   // debug variables which can be written and read from the pc and the drone
@@ -234,10 +242,6 @@ void appMain()
     {
       if (droneCmd == 100)
       {
-        // INIT
-        // lastReceivedDroneId = 255;
-        timer = 0;
-
         // put PacketData structs with out of bounds values into the otherPositions array
         for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
         {
@@ -255,9 +259,6 @@ void appMain()
     packetData.pos.x = kalmanPosition.x;
     packetData.pos.y = kalmanPosition.y;
     packetData.pos.z = kalmanPosition.z;
-    // packetData.pos.x = targetPosition.x;
-    // packetData.pos.y = targetPosition.y;
-    // packetData.pos.z = targetPosition.z;
 
     switch (droneCmd)
     {
@@ -275,12 +276,11 @@ void appMain()
         state = enginesOff;
         consolePrintf("Drone %d entered idle state\n", packetData.id);
         break;
-      case 6:
-        communicate();
-        consolePrintf("Drone %d executed communicate() once\n", packetData.id);
-        break;
       case 5: // trigger
         // lastReceivedDroneId = prevDroneId;
+        break;
+      case 6:  // reset timer
+        timer = 0;
         break;
       case 10: // debug
         // consolePrintf("%s\n", "##############");

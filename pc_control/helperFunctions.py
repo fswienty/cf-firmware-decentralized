@@ -3,6 +3,42 @@ import time
 from cflib.crazyflie.log import LogConfig
 from cflib.crazyflie.syncLogger import SyncLogger
 
+##### SIMPLE FUNCTIONS FOR CONVENIENCE #####
+def start(scf):
+    set_param(scf, 'drone.cmd', 1)
+
+
+def land(scf):
+    set_param(scf, 'drone.cmd', 2)
+
+
+def comm(scf):
+    set_param(scf, 'drone.cmd', 3)
+
+
+def idle(scf):
+    set_param(scf, 'drone.cmd', 4)
+
+
+def trigger(scf):
+    set_param(scf, 'drone.cmd', 5)
+
+
+def reset_timer(scf):
+    set_param(scf, 'drone.cmd', 6)
+
+
+def debug(scf):
+    set_param(scf, 'drone.cmd', 10)
+
+
+def set_target(scf, x, y, z):
+    set_param(scf, 'drone.targetX', x)
+    time.sleep(0.2)
+    set_param(scf, 'drone.targetY', y)
+    time.sleep(0.2)
+    set_param(scf, 'drone.targetZ', z)
+
 
 ##### PARAMETER GET AND SET METHODS #####
 def set_param(scf, param_name, value):

@@ -11,6 +11,19 @@ from cflib.crazyflie.swarm import Swarm
 # from cflib.crazyflie.console import Console
 
 
+forceFalloffDistance = 1.0
+targetForce = 1.0
+avoidanceRange = 0.5
+avoidanceForce = 1.0
+
+uris = {
+    'radio://0/80/2M/E7E7E7E7E4',
+    # 'radio://0/80/2M/E7E7E7E7E9',
+    # 'radio://0/80/2M/E7E7E7E7E1',
+    # 'radio://0/80/2M/E7E7E7E7E0',
+}
+
+
 def init_swarm(swarm):
     available_drones = []
     for uri in swarm._cfs.keys():
@@ -47,6 +60,14 @@ def init_drone(scf, amount, droneId):
     helpFun.set_param(scf, 'drone.amount', amount)
     time.sleep(0.2)
     helpFun.set_param(scf, 'drone.id', droneId)
+    time.sleep(0.2)
+    helpFun.set_param(scf, 'drone.forceFalloffDistance', forceFalloffDistance)
+    time.sleep(0.2)
+    helpFun.set_param(scf, 'drone.targetForce', targetForce)
+    time.sleep(0.2)
+    helpFun.set_param(scf, 'drone.avoidanceRange', avoidanceRange)
+    time.sleep(0.2)
+    helpFun.set_param(scf, 'drone.avoidanceForce', avoidanceForce)
     # time.sleep(0.2)
     # helpFun.set_param(scf, 'drone.prevId', prevId)
     # time.sleep(0.2)
@@ -61,52 +82,8 @@ def init_drone(scf, amount, droneId):
     print(f"Initialized drone nr {droneId}")
 
 
-def set_formation(scf, formation):
-    helpFun.set_param(scf, 'drone.targetX', x)
-    time.sleep(0.2)
-    helpFun.set_param(scf, 'drone.targetY', y)
-    time.sleep(0.2)
-    helpFun.set_param(scf, 'drone.targetZ', z)
-
-
-def set_target(scf, x, y, z):
-    helpFun.set_param(scf, 'drone.targetX', x)
-    time.sleep(0.2)
-    helpFun.set_param(scf, 'drone.targetY', y)
-    time.sleep(0.2)
-    helpFun.set_param(scf, 'drone.targetZ', z)
-
-
-def start(scf):
-    helpFun.set_param(scf, 'drone.cmd', 1)
-
-
-def land(scf):
-    helpFun.set_param(scf, 'drone.cmd', 2)
-
-
-def comm(scf):
-    helpFun.set_param(scf, 'drone.cmd', 3)
-
-
-def idle(scf):
-    helpFun.set_param(scf, 'drone.cmd', 4)
-
-
-def trigger(scf):
-    helpFun.set_param(scf, 'drone.cmd', 5)
-
-
-def debug(scf):
-    helpFun.set_param(scf, 'drone.cmd', 10)
-
-
-uris = {
-    'radio://0/80/2M/E7E7E7E7E4',
-    # 'radio://0/80/2M/E7E7E7E7E9',
-    # 'radio://0/80/2M/E7E7E7E7E1',
-    # 'radio://0/80/2M/E7E7E7E7E0',
-}
+def set_formation(swarm, formation):
+    
 
 
 if __name__ == '__main__':
@@ -116,10 +93,12 @@ if __name__ == '__main__':
     factory = CachedCfFactory(rw_cache='./cache')
 
     with Swarm(uris, factory=factory) as swarm:
-        swarm.parallel(helpFun.reset_estimator)
+        print('Resetting estimators...')
+        # swarm.parallel(helpFun.reset_estimator)
         print('Waiting for parameters to be downloaded...')
         swarm.parallel(helpFun.wait_for_param_download)
         init_swarm(swarm)
+        swarm.parallel(reset_timer)
         print("###################################")
 
         while True:
@@ -131,8 +110,6 @@ if __name__ == '__main__':
                 print("Program quit")
                 sys.exit(0)
             elif inp[0] == "formation" and len(inp) == 2:  # usage: formation [formation name (without the ".csv")]
-                # TODO check formation size vs available drones
-
                 formation_name = inp[1]
                 # load formation
                 path = os.path.dirname(os.path.abspath(__file__))
@@ -162,7 +139,7 @@ if __name__ == '__main__':
 
                 # set formation
                 print(f"Setting formation {formation_name}")
-                swarm.parallel_safe(set_target, args_dict=args_dict)
+                swarm.parallel_safe(helpFun.set_target, args_dict=args_dict)
                 continue
 
             # the scf object of the crazyflie that should execute some action, or "all"
@@ -200,17 +177,19 @@ if __name__ == '__main__':
             elif action == "get" and len(args) == 1:  # usage: [crazyflie] get [group.name]
                 function = helpFun.get_param
             elif action == "start" and len(args) == 0:  # usage: [crazyflie] start
-                function = start
+                function = helpFun.start
             elif action == "land" and len(args) == 0:  # usage: [crazyflie] land
-                function = land
+                function = helpFun.land
             elif action == "comm" and len(args) == 0:  # usage: [crazyflie] comm
-                function = comm
+                function = helpFun.comm
             elif action == "idle" and len(args) == 0:  # usage: [crazyflie] idle
-                function = idle
+                function = helpFun.idle
             elif action == "trigger" and len(args) == 0:  # usage: [crazyflie] trigger
-                function = trigger
+                function = helpFun.trigger
+            elif action == "reset" and len(args) == 0:  # usage: [crazyflie] trigger
+                function = helpFun.reset_timer
             elif action == "debug" and len(args) == 0:  # usage: [crazyflie] debug
-                function = debug
+                function = helpFun.debug
             elif action == "target" and len(args) == 3:  # usage: [crazyflie] target [x] [y] [z]
                 function = set_target
             else:
