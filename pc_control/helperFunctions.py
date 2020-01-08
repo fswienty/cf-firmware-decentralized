@@ -1,4 +1,6 @@
+import os
 import time
+import numpy as np
 
 from cflib.crazyflie.log import LogConfig
 from cflib.crazyflie.syncLogger import SyncLogger
@@ -38,6 +40,101 @@ def set_target(scf, x, y, z):
     set_param(scf, 'drone.targetY', y)
     time.sleep(0.2)
     set_param(scf, 'drone.targetZ', z)
+
+
+##### DRONE INITIALIZATION #####
+def init_swarm(swarm, forceFalloff, targetForce, avoidRange, avoidForce):
+    available_drones = []
+    for uri in swarm._cfs.keys():
+        available_drones.append(int(uri[-1]))
+    available_drones.sort()
+    print(f"Available drones: {available_drones}")
+
+    args_dict = {}
+    available_uris = list(swarm._cfs)
+    for uri in available_uris:
+        amount = len(available_uris)
+        droneId = int(uri[-1])
+
+        # prevIdIndex = available_drones.index(droneId)
+        # if prevIdIndex == 0:
+        #     prevIdIndex = len(available_drones) - 1
+        # else:
+        #     prevIdIndex -= 1
+        # prevId = available_drones[prevIdIndex]
+
+        # nextIdIndex = available_drones.index(droneId)
+        # if nextIdIndex == len(available_drones) - 1:
+        #     nextIdIndex = 0
+        # else:
+        #     nextIdIndex += 1
+        # nextId = available_drones[nextIdIndex]
+
+        # ctr = available_drones.index(droneId)
+
+        args_dict[uri] = [amount, droneId, forceFalloff, targetForce, avoidRange, avoidForce]
+        
+    swarm.parallel_safe(init_drone, args_dict=args_dict)
+
+
+def init_drone(scf, amount, droneId, forceFalloff, targetForce, avoidRange, avoidForce):
+    set_param(scf, 'drone.amount', amount)
+    time.sleep(0.2)
+    set_param(scf, 'drone.id', droneId)
+    time.sleep(0.2)
+    set_param(scf, 'drone.forceFalloff', forceFalloff)
+    time.sleep(0.2)
+    set_param(scf, 'drone.targetForce', targetForce)
+    time.sleep(0.2)
+    set_param(scf, 'drone.avoidRange', avoidRange)
+    time.sleep(0.2)
+    set_param(scf, 'drone.avoidForce', avoidForce)
+    # time.sleep(0.2)
+    # .set_param(scf, 'drone.prevId', prevId)
+    # time.sleep(0.2)
+    # set_param(scf, 'drone.nextId', nextId)
+    # time.sleep(0.2)
+    # set_param(scf, 'drone.ctr', ctr)
+    time.sleep(0.2)
+    set_param(scf, 'drone.cmd', 100)
+    time.sleep(0.2)
+    get_param(scf, 'dbg.chr')
+    # print(f"Initialized drone nr {droneId}, prevId: {prevId}, nextId: {nextId}")
+    print(f"Initialized drone nr {droneId}")
+
+
+##### FORMATION SETTING #####
+def set_formation(swarm, formation_name):
+    # load formation
+    path = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(path, "formations")
+    path = os.path.join(path, f"{formation_name}.csv")
+    print(path)
+    try:
+        formation = np.loadtxt(path, delimiter=",")
+    except:
+        print(f"Formation {formation_name} not found")
+        return
+
+    # construct args_dict
+    available_uris = list(swarm._cfs)
+    formation_size = np.size(formation, 0)
+    available_drones = len(available_uris)
+    max_iterator = formation_size  # Normally, formation_size and available_drones has the same value, so just use one of them here.
+    if formation_size < available_drones:
+        print(f"Formation {formation_name} requires {formation_size} drones, but there are {available_drones} available. Some drones will remain stationary.")
+        max_iterator = formation_size
+    elif formation_size > available_drones:
+        print(f"Formation {formation_name} requires {formation_size} drones, but there are only {available_drones} available. Some places in the formation will not be occupied.")
+        max_iterator = available_drones
+    args_dict = {}
+    for i in range(0, max_iterator):
+        args_dict[available_uris[i]] = [formation[i][0], formation[i][1], formation[i][2]]
+    print(args_dict)
+
+    # set formation
+    print(f"Setting formation {formation_name}")
+    swarm.parallel_safe(set_target, args_dict=args_dict)
 
 
 ##### PARAMETER GET AND SET METHODS #####
