@@ -49,38 +49,6 @@ if __name__ == '__main__':
                 sys.exit(0)
             elif inp[0] == "formation" and len(inp) == 2:  # usage: formation [formation name (without the ".csv")]
                 helpFun.set_formation(swarm, inp[1])
-
-                # formation_name = inp[1]
-                # # load formation
-                # path = os.path.dirname(os.path.abspath(__file__))
-                # path = os.path.join(path, "formations")
-                # path = os.path.join(path, f"{formation_name}.csv")
-                # print(path)
-                # try:
-                #     formation = np.loadtxt(path, delimiter=",")
-                # except:
-                #     print(f"Formation {formation_name} not found")
-                #     continue
-
-                # # construct args_dict
-                # available_uris = list(swarm._cfs)
-                # formation_size = np.size(formation, 0)
-                # available_drones = len(available_uris)
-                # max_iterator = formation_size  # Normally, formation_size and available_drones has the same value, so just use one of them here.
-                # if formation_size < available_drones:
-                #     print(f"Formation {formation_name} requires {formation_size} drones, but there are {available_drones} available. Some drones will remain stationary.")
-                #     max_iterator = formation_size
-                # elif formation_size > available_drones:
-                #     print(f"Formation {formation_name} requires {formation_size} drones, but there are only {available_drones} available. Some places in the formation will not be occupied.")
-                #     max_iterator = available_drones
-                # args_dict = {}
-                # for i in range(0, max_iterator):
-                #     args_dict[available_uris[i]] = [formation[i][0], formation[i][1], formation[i][2]]
-                # print(args_dict)
-
-                # # set formation
-                # print(f"Setting formation {formation_name}")
-                # swarm.parallel_safe(helpFun.set_target, args_dict=args_dict)
                 continue
 
             # the scf object of the crazyflie that should execute some action, or "all"
