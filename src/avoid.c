@@ -93,27 +93,6 @@ static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
   sp->attitude.yaw = 0;
 }
 
-static bool checkDistances()
-{
-  Vector3 dronePosition = packetData.pos;
-  bool otherIsClose = false;
-  for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
-  {
-    // Vector3 otherPosition = otherPositions[i];
-    if (otherPositions[i].x == DUMMY_POSITION)
-    {
-      continue;
-    }
-    Vector3 droneToOther = sub(dronePosition, otherPositions[i]);
-    float distance = magnitude(droneToOther);
-    if (distance < 0.3f)
-    {
-      otherIsClose = true;
-    }
-  }
-  return otherIsClose;
-}
-
 static bool approachTargetAvoidOthers(setpoint_t *sp)
 {
   Vector3 dronePosition = packetData.pos;
@@ -182,14 +161,20 @@ void appMain()
   static setpoint_t setpoint;
   static State state = uninitialized;
   bool isAvoiding = false;
-  // timer = 0;
+
+  // set some initial values, just in case something fails
+  forceFalloff = 1.0
+  targetForce = 1.0
+  avoidRange = 0.5
+  avoidForce = 1.0
+  timer = 0;
 
   // drone.cmd value meanings:
   // 1:   start
   // 2:   land
   // 3:   debug1
   // 4:   debug2
-  // 5:   trigger a drone to start the communication
+  // 5:   idle
   // 6:   reset timer
   // 100: used to trigger initialization
   // be careful not to use these values for something else
@@ -270,17 +255,19 @@ void appMain()
         break;
       case 3:  // comm
         state = debug1;
-        consolePrintf("Drone %d entered communication debug state\n", packetData.id);
+        consolePrintf("Drone %d entered debug1 state \n", packetData.id);
         break;
       case 4:
-        state = enginesOff;
-        consolePrintf("Drone %d entered idle state\n", packetData.id);
+        state = debug2;
+        consolePrintf("Drone %d entered debug2 state \n", packetData.id);
         break;
-      case 5: // trigger
-        // lastReceivedDroneId = prevDroneId;
+      case 5: // idle
+        state = enginesOff;
+        consolePrintf("Drone %d entered idle state \n", packetData.id);
         break;
       case 6:  // reset timer
         timer = 0;
+        consolePrintf("Timer reset for drone %d \n", packetData.id);
         break;
       case 10: // debug
         // consolePrintf("%s\n", "##############");
@@ -331,19 +318,8 @@ void appMain()
         }
         break;
       case debug1:
-        communicate();
-        if (checkDistances())
-        {
-          ledSetAll();
-        }
-        else
-        {
-          ledClearAll();
-        }
         break;
       case debug2:
-        break;
-      case debug3:
         break;
     }
     commanderSetSetpoint(&setpoint, 3);

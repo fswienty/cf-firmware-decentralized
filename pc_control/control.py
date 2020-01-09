@@ -35,7 +35,9 @@ if __name__ == '__main__':
         # swarm.parallel(helpFun.reset_estimator)
         print('Waiting for parameters to be downloaded...')
         swarm.parallel(helpFun.wait_for_param_download)
+        print('Initializing...')
         helpFun.init_swarm(swarm, forceFalloff, targetForce, avoidRange, avoidForce)
+        print('Resetting timers...')
         swarm.parallel(helpFun.reset_timer)
         print("###################################")
 
@@ -89,13 +91,13 @@ if __name__ == '__main__':
                 function = helpFun.start
             elif action == "land" and len(args) == 0:  # usage: [crazyflie] land
                 function = helpFun.land
-            elif action == "comm" and len(args) == 0:  # usage: [crazyflie] comm
-                function = helpFun.comm
+            elif action == "debug1" and len(args) == 0:  # usage: [crazyflie] debug1
+                function = helpFun.debug1
+            elif action == "debug2" and len(args) == 0:  # usage: [crazyflie] debug2
+                function = helpFun.debug2
             elif action == "idle" and len(args) == 0:  # usage: [crazyflie] idle
                 function = helpFun.idle
-            elif action == "trigger" and len(args) == 0:  # usage: [crazyflie] trigger
-                function = helpFun.trigger
-            elif action == "reset" and len(args) == 0:  # usage: [crazyflie] trigger
+            elif action == "reset" and len(args) == 0:  # usage: [crazyflie] reset
                 function = helpFun.reset_timer
             elif action == "debug" and len(args) == 0:  # usage: [crazyflie] debug
                 function = helpFun.debug

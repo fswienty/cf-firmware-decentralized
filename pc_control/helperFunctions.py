@@ -5,6 +5,7 @@ import numpy as np
 from cflib.crazyflie.log import LogConfig
 from cflib.crazyflie.syncLogger import SyncLogger
 
+
 ##### SIMPLE FUNCTIONS FOR CONVENIENCE #####
 def start(scf):
     set_param(scf, 'drone.cmd', 1)
@@ -14,15 +15,15 @@ def land(scf):
     set_param(scf, 'drone.cmd', 2)
 
 
-def comm(scf):
+def debug1(scf):
     set_param(scf, 'drone.cmd', 3)
 
 
-def idle(scf):
+def debug2(scf):
     set_param(scf, 'drone.cmd', 4)
 
 
-def trigger(scf):
+def idle(scf):
     set_param(scf, 'drone.cmd', 5)
 
 
@@ -45,7 +46,7 @@ def set_target(scf, x, y, z):
 ##### DRONE INITIALIZATION #####
 def init_swarm(swarm, forceFalloff, targetForce, avoidRange, avoidForce):
     available_drones = []
-    for uri in swarm._cfs.keys():
+    for uri in list(swarm._cfs):
         available_drones.append(int(uri[-1]))
     available_drones.sort()
     print(f"Available drones: {available_drones}")
@@ -99,8 +100,7 @@ def init_drone(scf, amount, droneId, forceFalloff, targetForce, avoidRange, avoi
     set_param(scf, 'drone.cmd', 100)
     time.sleep(0.2)
     get_param(scf, 'dbg.chr')
-    # print(f"Initialized drone nr {droneId}, prevId: {prevId}, nextId: {nextId}")
-    print(f"Initialized drone nr {droneId}")
+    # print(f"Initialized drone nr {droneId}")
 
 
 ##### FORMATION SETTING #####
