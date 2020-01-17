@@ -163,10 +163,10 @@ void appMain()
   bool isAvoiding = false;
 
   // set some initial values, just in case something fails
-  forceFalloff = 1.0
-  targetForce = 1.0
-  avoidRange = 0.5
-  avoidForce = 1.0
+  forceFalloff = 1.0;
+  targetForce = 1.0;
+  avoidRange = 0.5;
+  avoidForce = 1.0;
   timer = 0;
 
   // drone.cmd value meanings:
