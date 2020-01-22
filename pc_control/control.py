@@ -11,15 +11,15 @@ from cflib.crazyflie.swarm import Swarm
 # from cflib.crazyflie.console import Console
 
 
-forceFalloff = 1.0
-targetForce = 1.0
-avoidRange = 0.5
-avoidForce = 1.0
+forceFalloff = 2.0
+targetForce = 0.2
+avoidRange = 0.7
+avoidForce = 2.0
 
 uris = [
     'radio://0/80/2M/E7E7E7E7E0',
     # 'radio://0/80/2M/E7E7E7E7E1',
-    # 'radio://0/80/2M/E7E7E7E7E4',
+    'radio://0/80/2M/E7E7E7E7E4',
     # 'radio://0/80/2M/E7E7E7E7E9',
 ]
 
@@ -45,6 +45,7 @@ if __name__ == '__main__':
             inp = input().split()
             
             if inp == []:
+                print("No input given.")
                 continue
 
             if inp[0] == "quit":
