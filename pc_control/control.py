@@ -17,10 +17,10 @@ avoidRange = 0.5
 avoidForce = 1.0
 
 uris = [
-    'radio://0/80/2M/E7E7E7E7E4',
-    # 'radio://0/80/2M/E7E7E7E7E9',
+    'radio://0/80/2M/E7E7E7E7E0',
     # 'radio://0/80/2M/E7E7E7E7E1',
-    # 'radio://0/80/2M/E7E7E7E7E0',
+    # 'radio://0/80/2M/E7E7E7E7E4',
+    # 'radio://0/80/2M/E7E7E7E7E9',
 ]
 
 
@@ -43,6 +43,9 @@ if __name__ == '__main__':
 
         while True:
             inp = input().split()
+            
+            if inp == []:
+                continue
 
             if inp[0] == "quit":
                 swarm.close_links()

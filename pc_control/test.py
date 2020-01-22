@@ -6,4 +6,10 @@ import os
 
 
 if __name__ == '__main__':
-    print("oi")
+    testStr = ""
+    testSplit = testStr.split()
+    print("#####################")
+    print(testStr)
+    print(testSplit)
+    if (testSplit != []):
+        print(testSplit[0])
