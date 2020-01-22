@@ -48,12 +48,13 @@ typedef struct _PacketData
 } PacketData;  // size: ? + 12 bytes
 
 
-static PacketData packetData;  // oi
+static PacketData packetData;  // the data that is send around via the p2p broadcast method
 static Vector3 targetPosition;  // this drones's target position
 static Vector3 otherPositions[OTHER_DRONES_ARRAY_SIZE];  // array of the positions of the other drones
 // static uint8_t lastReceivedDroneId;  // id of the last received packetData
 static uint8_t droneAmount;  // amount of drones. SET DURING INITIALIZATION, DON'T CHANGE AT RUNTIME.
 static uint8_t timer;
+// variables for the avoidance algorithm
 static float forceFalloff;
 static float targetForce;
 static float avoidRange;
@@ -93,11 +94,12 @@ static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
   sp->attitude.yaw = 0;
 }
 
-static bool approachTargetAvoidOthers(setpoint_t *sp)
+static void approachTargetAvoidOthers(setpoint_t *sp, bool *isInAvoidRange)
 {
   Vector3 dronePosition = packetData.pos;
   Vector3 sum = (Vector3){0, 0, 0};
-  bool isAvoiding = false;
+  // bool isInAvoidRange = false;
+  *isInAvoidRange = false;
 
   // target stuff
   Vector3 droneToTarget = sub(dronePosition, targetPosition);
@@ -116,21 +118,34 @@ static bool approachTargetAvoidOthers(setpoint_t *sp)
   for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
   {
     Vector3 otherToDrone = sub(otherPositions[i], dronePosition);
-    if(magnitude(otherToDrone) > avoidRange)
+    if(magnitude(otherToDrone) < avoidRange)
     {
-      continue;
+      *isInAvoidRange = true;
+      float invDistance = 1 - magnitude(otherToDrone) / avoidRange;
+      otherToDrone = norm(otherToDrone);
+      otherToDrone = mul(otherToDrone, invDistance);
+      otherToDrone = mul(otherToDrone, avoidForce);
+      sum = add(sum, otherToDrone);
     }
-    float invDistance = 1 - magnitude(otherToDrone) / avoidRange;
-    otherToDrone = norm(otherToDrone);
-    otherToDrone = mul(otherToDrone, invDistance);
-    otherToDrone = mul(otherToDrone, avoidForce);
-    sum = add(sum, otherToDrone);
-    isAvoiding = true;
   }
 
   sum = add(dronePosition, sum);
   setHoverSetpoint(sp, sum.x, sum.y, sum.z);
-  return isAvoiding;
+  // return isInAvoidRange;
+}
+
+static void checkAvoidRange(bool *isInAvoidRange)
+{
+  *isInAvoidRange = false;
+  Vector3 dronePosition = packetData.pos;
+  for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
+  {
+    Vector3 droneToOther = sub(dronePosition, otherPositions[i]);
+    if (magnitude(droneToOther) < avoidRange)
+    {
+      *isInAvoidRange = true;
+    }
+  }
 }
 
 static void moveVertical(setpoint_t *sp, float zVelocity)
@@ -160,7 +175,7 @@ void appMain()
   static point_t kalmanPosition;
   static setpoint_t setpoint;
   static State state = uninitialized;
-  bool isAvoiding = false;
+  bool isInAvoidRange = false;  // true if the drone is close within avoidRange of another one
 
   // set some initial values, just in case something fails
   forceFalloff = 1.0;
@@ -261,17 +276,17 @@ void appMain()
         state = debug2;
         consolePrintf("Drone %d entered debug2 state \n", packetData.id);
         break;
-      case 5: // idle
+      case 5: // off
         state = enginesOff;
-        consolePrintf("Drone %d entered idle state \n", packetData.id);
+        consolePrintf("Drone %d entered enginesOff state \n", packetData.id);
         break;
       case 6:  // reset timer
         timer = 0;
         consolePrintf("Timer reset for drone %d \n", packetData.id);
         break;
-      case 10: // debug
+      case 10: // print debug info
         // consolePrintf("%s\n", "##############");
-        consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, targetPosition.x, targetPosition.y, targetPosition.z);
+        consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)targetPosition.x, (double)targetPosition.y, (double)targetPosition.z);
         // consolePrintf("triggerId: %d\n", prevDroneId);
         // consolePrintf("receivedId: %d\n", lastReceivedDroneId);
         break;
@@ -303,12 +318,13 @@ void appMain()
         if (packetData.pos.z < 0.15f)
         {
           state = enginesOff;
+          consolePrintf("Drone %d entered enginesOff state \n", packetData.id);
         }
         break;
       case flying:
         communicate();
-        isAvoiding = approachTargetAvoidOthers(&setpoint);
-        if (isAvoiding)
+        approachTargetAvoidOthers(&setpoint, &isInAvoidRange);
+        if (isInAvoidRange)
         {
           ledSetAll();
         }
@@ -318,6 +334,16 @@ void appMain()
         }
         break;
       case debug1:
+        communicate();
+        checkAvoidRange(&isInAvoidRange);
+        if (isInAvoidRange)
+        {
+          ledSetAll();
+        }
+        else
+        {
+          ledClearAll();
+        }
         break;
       case debug2:
         break;

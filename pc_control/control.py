@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     with Swarm(uris, factory=factory) as swarm:
         print('Resetting estimators...')
-        # swarm.parallel(helpFun.reset_estimator)
+        swarm.parallel(helpFun.reset_estimator)
         print('Waiting for parameters to be downloaded...')
         swarm.parallel(helpFun.wait_for_param_download)
         print('Initializing...')
@@ -95,14 +95,14 @@ if __name__ == '__main__':
                 function = helpFun.debug1
             elif action == "debug2" and len(args) == 0:  # usage: [crazyflie] debug2
                 function = helpFun.debug2
-            elif action == "idle" and len(args) == 0:  # usage: [crazyflie] idle
-                function = helpFun.idle
+            elif action == "off" and len(args) == 0:  # usage: [crazyflie] idle
+                function = helpFun.off
             elif action == "reset" and len(args) == 0:  # usage: [crazyflie] reset
                 function = helpFun.reset_timer
-            elif action == "debug" and len(args) == 0:  # usage: [crazyflie] debug
-                function = helpFun.debug
+            elif action == "info" and len(args) == 0:  # usage: [crazyflie] debug
+                function = helpFun.info
             elif action == "target" and len(args) == 3:  # usage: [crazyflie] target [x] [y] [z]
-                function = set_target
+                function = helpFun.set_target
             else:
                 print("Invalid command")
                 continue

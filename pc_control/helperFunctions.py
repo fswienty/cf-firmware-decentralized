@@ -23,7 +23,7 @@ def debug2(scf):
     set_param(scf, 'drone.cmd', 4)
 
 
-def idle(scf):
+def off(scf):
     set_param(scf, 'drone.cmd', 5)
 
 
@@ -31,7 +31,7 @@ def reset_timer(scf):
     set_param(scf, 'drone.cmd', 6)
 
 
-def debug(scf):
+def info(scf):
     set_param(scf, 'drone.cmd', 10)
 
 
@@ -113,7 +113,7 @@ def set_formation(swarm, formation_name):
     try:
         formation = np.loadtxt(path, delimiter=",")
     except:
-        print(f"Formation {formation_name} not found")
+        print(f"Formation {formation_name} not found.")
         return
 
     # construct args_dict
