@@ -55,10 +55,11 @@ static Vector3 otherPositions[OTHER_DRONES_ARRAY_SIZE];  // array of the positio
 static uint8_t droneAmount;  // amount of drones. SET DURING INITIALIZATION, DON'T CHANGE AT RUNTIME.
 static uint8_t timer;
 // variables for the avoidance algorithm
-static float forceFalloff;
-static float targetForce;
-static float avoidRange;
-static float avoidForce;
+static float forceFalloff = 1.5;
+static float targetForce = 0.3;
+static float avoidRange = 1.0;
+static float avoidForce = 1.5;
+
 
 static void communicate()
 {
@@ -98,7 +99,6 @@ static void approachTargetAvoidOthers(setpoint_t *sp, bool *isInAvoidRange)
 {
   Vector3 dronePosition = packetData.pos;
   Vector3 sum = (Vector3){0, 0, 0};
-  // bool isInAvoidRange = false;
   *isInAvoidRange = false;
 
   // target stuff
@@ -121,7 +121,7 @@ static void approachTargetAvoidOthers(setpoint_t *sp, bool *isInAvoidRange)
     if(magnitude(otherToDrone) < avoidRange)
     {
       *isInAvoidRange = true;
-      float invDistance = 1 - magnitude(otherToDrone) / avoidRange;
+      float invDistance = 1 - (magnitude(otherToDrone) / avoidRange);
       otherToDrone = norm(otherToDrone);
       otherToDrone = mul(otherToDrone, invDistance);
       otherToDrone = mul(otherToDrone, avoidForce);
@@ -129,9 +129,13 @@ static void approachTargetAvoidOthers(setpoint_t *sp, bool *isInAvoidRange)
     }
   }
 
+  // add sum of forces to drone position and apply as setpoint
+  if (packetData.id == 4)
+  {
+    consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)sum.x, (double)sum.y, (double)sum.z);
+  }
   sum = add(dronePosition, sum);
   setHoverSetpoint(sp, sum.x, sum.y, sum.z);
-  // return isInAvoidRange;
 }
 
 static void checkAvoidRange(bool *isInAvoidRange)
@@ -176,12 +180,7 @@ void appMain()
   static setpoint_t setpoint;
   static State state = uninitialized;
   bool isInAvoidRange = false;  // true if the drone is close within avoidRange of another one
-
-  // set some initial values, just in case something fails
-  forceFalloff = 1.0;
-  targetForce = 1.0;
-  avoidRange = 0.5;
-  avoidForce = 1.0;
+  
   timer = 0;
 
   // drone.cmd value meanings:
@@ -276,7 +275,7 @@ void appMain()
         state = debug2;
         consolePrintf("Drone %d entered debug2 state \n", packetData.id);
         break;
-      case 5: // off
+      case 5:  // off
         state = enginesOff;
         consolePrintf("Drone %d entered enginesOff state \n", packetData.id);
         break;
@@ -284,7 +283,7 @@ void appMain()
         timer = 0;
         consolePrintf("Timer reset for drone %d \n", packetData.id);
         break;
-      case 10: // print debug info
+      case 10:  // print debug info
         // consolePrintf("%s\n", "##############");
         consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)targetPosition.x, (double)targetPosition.y, (double)targetPosition.z);
         // consolePrintf("triggerId: %d\n", prevDroneId);
@@ -297,7 +296,7 @@ void appMain()
 
     switch (state)
     {
-      case uninitialized: // this case should never occur since the drone should have been initialized before the switch statement
+      case uninitialized:  // this case should never occur since the drone should have been initialized before the switch statement
       case enginesOff:
       default:
         ledClearAll();

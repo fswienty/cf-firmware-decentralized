@@ -74,7 +74,7 @@ def init_swarm(swarm, forceFalloff, targetForce, avoidRange, avoidForce):
         # ctr = available_drones.index(droneId)
 
         args_dict[uri] = [amount, droneId, forceFalloff, targetForce, avoidRange, avoidForce]
-        
+
     swarm.parallel_safe(init_drone, args_dict=args_dict)
 
 
@@ -109,7 +109,7 @@ def set_formation(swarm, formation_name):
     path = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(path, "formations")
     path = os.path.join(path, f"{formation_name}.csv")
-    print(path)
+    # print(path)
     try:
         formation = np.loadtxt(path, delimiter=",")
     except:
@@ -130,7 +130,7 @@ def set_formation(swarm, formation_name):
     args_dict = {}
     for i in range(0, max_iterator):
         args_dict[available_uris[i]] = [formation[i][0], formation[i][1], formation[i][2]]
-    print(args_dict)
+    # print(args_dict)
 
     # set formation
     print(f"Setting formation {formation_name}")
