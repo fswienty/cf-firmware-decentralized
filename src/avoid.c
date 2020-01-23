@@ -95,14 +95,50 @@ static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
   sp->attitude.yaw = 0;
 }
 
-static void approachTargetAvoidOthers(setpoint_t *sp, bool *isInAvoidRange)
-{
-  Vector3 dronePosition = packetData.pos;
-  Vector3 sum = (Vector3){0, 0, 0};
-  *isInAvoidRange = false;
+// static void approachTargetAvoidOthers(setpoint_t *sp, bool *isInAvoidRange)
+// {
+//   Vector3 dronePosition = packetData.pos;
+//   Vector3 sum = (Vector3){0, 0, 0};
+//   *isInAvoidRange = false;
+//   // target stuff
+//   Vector3 droneToTarget = sub(dronePosition, targetPosition);
+//   if(magnitude(droneToTarget) > forceFalloff)
+//   {
+//     droneToTarget = norm(droneToTarget);
+//   }
+//   else
+//   {
+//     droneToTarget = mul(droneToTarget, 1 / forceFalloff);
+//   }
+//   droneToTarget = mul(droneToTarget, targetForce);
+//   sum = add(sum, droneToTarget);
+//   // other drones stuff (maybe quit early if otherPositions[i].x == DUMMY_POSITION?)
+//   for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
+//   {
+//     Vector3 otherToDrone = sub(otherPositions[i], dronePosition);
+//     float distance = magnitude(otherToDrone);
+//     if(distance < avoidRange)
+//     {
+//       *isInAvoidRange = true;
+//       otherToDrone = norm(otherToDrone);
+//       otherToDrone = mul(otherToDrone, 1 - (distance / avoidRange));
+//       otherToDrone = mul(otherToDrone, avoidForce);
+//       sum = add(sum, otherToDrone);
+//     }
+//   }
+//   // add sum of forces to drone position and apply as setpoint
+//   if (packetData.id == 4)
+//   {
+//     consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)sum.x, (double)sum.y, (double)sum.z);
+//   }
+//   sum = add(dronePosition, sum);
+//   setHoverSetpoint(sp, sum.x, sum.y, sum.z);
+// }
 
-  // target stuff
-  Vector3 droneToTarget = sub(dronePosition, targetPosition);
+
+static Vector3 getTargetVector()
+{
+  Vector3 droneToTarget = sub(packetData.pos, targetPosition);
   if(magnitude(droneToTarget) > forceFalloff)
   {
     droneToTarget = norm(droneToTarget);
@@ -112,30 +148,28 @@ static void approachTargetAvoidOthers(setpoint_t *sp, bool *isInAvoidRange)
     droneToTarget = mul(droneToTarget, 1 / forceFalloff);
   }
   droneToTarget = mul(droneToTarget, targetForce);
-  sum = add(sum, droneToTarget);
+  return droneToTarget;
+}
 
+static Vector3 getAvoidVector(bool *isInAvoidRange)
+{
+  *isInAvoidRange = false;
   // other drones stuff (maybe quit early if otherPositions[i].x == DUMMY_POSITION?)
+  Vector3 sum = (Vector3){0, 0, 0};
   for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
   {
-    Vector3 otherToDrone = sub(otherPositions[i], dronePosition);
-    if(magnitude(otherToDrone) < avoidRange)
+    Vector3 otherToDrone = sub(otherPositions[i], packetData.pos);
+    float distance = magnitude(otherToDrone);
+    if(distance < avoidRange)
     {
       *isInAvoidRange = true;
-      float invDistance = 1 - (magnitude(otherToDrone) / avoidRange);
       otherToDrone = norm(otherToDrone);
-      otherToDrone = mul(otherToDrone, invDistance);
+      otherToDrone = mul(otherToDrone, 1 - (distance / avoidRange));
       otherToDrone = mul(otherToDrone, avoidForce);
       sum = add(sum, otherToDrone);
     }
   }
-
-  // add sum of forces to drone position and apply as setpoint
-  if (packetData.id == 4)
-  {
-    consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)sum.x, (double)sum.y, (double)sum.z);
-  }
-  sum = add(dronePosition, sum);
-  setHoverSetpoint(sp, sum.x, sum.y, sum.z);
+  return sum;
 }
 
 static void checkAvoidRange(bool *isInAvoidRange)
@@ -322,7 +356,12 @@ void appMain()
         break;
       case flying:
         communicate();
-        approachTargetAvoidOthers(&setpoint, &isInAvoidRange);
+        // approachTargetAvoidOthers(&setpoint, &isInAvoidRange);
+        Vector3 moveVector = (Vector3){0, 0, 0};
+        moveVector = add(moveVector, getTargetVector());
+        moveVector = add(moveVector, getAvoidVector(&isInAvoidRange));
+        moveVector = add(moveVector, packetData.pos);
+        setHoverSetpoint(&setpoint, moveVector.x, moveVector.y, moveVector.z);
         if (isInAvoidRange)
         {
           ledSetAll();
