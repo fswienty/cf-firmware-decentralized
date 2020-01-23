@@ -30,10 +30,22 @@ Vector3 mul(Vector3 vec3, float f)
 
 float magnitude(Vector3 vec3)
 {
-    return sqrtf(powf(vec3.x, 2) + powf(vec3.y, 2) + powf(vec3.z, 2));
+    // return sqrtf(powf(vec3.x, 2) + powf(vec3.y, 2) + powf(vec3.z, 2));
+    return sqrtf(vec3.x * vec3.x + vec3.y * vec3.y + vec3.z * vec3.z);
 }
 
 Vector3 norm(Vector3 vec3)
 {
     return mul(vec3, 1 / magnitude(vec3));
+}
+
+Vector3 clamp(Vector3 vec3, float maxLength)
+{
+    // Vector3 result = vec3;
+    float length = magnitude(vec3);
+    if (length > maxLength)
+    {
+        return mul(vec3, maxLength / length);
+    }
+    return vec3;
 }

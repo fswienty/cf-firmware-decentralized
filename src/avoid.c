@@ -361,6 +361,7 @@ void appMain()
         moveVector = add(moveVector, getTargetVector());
         moveVector = add(moveVector, getAvoidVector(&isInAvoidRange));
         moveVector = add(moveVector, packetData.pos);
+        moveVector = clamp(moveVector, 0.5f);
         setHoverSetpoint(&setpoint, moveVector.x, moveVector.y, moveVector.z);
         if (isInAvoidRange)
         {

@@ -17,3 +17,4 @@ Vector3 sub(Vector3 from, Vector3 to);
 Vector3 mul(Vector3 vec3, float f);
 float magnitude(Vector3 vec3);
 Vector3 norm(Vector3 vec3);
+Vector3 clamp(Vector3 vec3, float maxLength);
