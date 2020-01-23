@@ -44,7 +44,7 @@ def set_target(scf, x, y, z):
 
 
 ##### DRONE INITIALIZATION #####
-def init_swarm(swarm, forceFalloff, targetForce, avoidRange, avoidForce):
+def init_swarm(swarm, forceFalloff, targetForce, avoidRange, avoidForce, maxLength):
     available_drones = []
     for uri in list(swarm._cfs):
         available_drones.append(int(uri[-1]))
@@ -73,12 +73,12 @@ def init_swarm(swarm, forceFalloff, targetForce, avoidRange, avoidForce):
 
         # ctr = available_drones.index(droneId)
 
-        args_dict[uri] = [amount, droneId, forceFalloff, targetForce, avoidRange, avoidForce]
+        args_dict[uri] = [amount, droneId, forceFalloff, targetForce, avoidRange, avoidForce, maxLength]
 
     swarm.parallel_safe(init_drone, args_dict=args_dict)
 
 
-def init_drone(scf, amount, droneId, forceFalloff, targetForce, avoidRange, avoidForce):
+def init_drone(scf, amount, droneId, forceFalloff, targetForce, avoidRange, avoidForce, maxLength):
     set_param(scf, 'drone.amount', amount)
     time.sleep(0.2)
     set_param(scf, 'drone.id', droneId)
@@ -90,6 +90,8 @@ def init_drone(scf, amount, droneId, forceFalloff, targetForce, avoidRange, avoi
     set_param(scf, 'drone.avoidRange', avoidRange)
     time.sleep(0.2)
     set_param(scf, 'drone.avoidForce', avoidForce)
+    time.sleep(0.2)
+    set_param(scf, 'drone.maxLength', maxLength)
     # time.sleep(0.2)
     # .set_param(scf, 'drone.prevId', prevId)
     # time.sleep(0.2)

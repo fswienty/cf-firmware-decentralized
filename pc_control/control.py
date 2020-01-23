@@ -13,8 +13,9 @@ from cflib.crazyflie.swarm import Swarm
 
 forceFalloff = 1.0
 targetForce = 0.3
-avoidRange = 1.0
+avoidRange = 0.7
 avoidForce = 1.5
+maxLength = 0.1
 
 uris = [
     'radio://0/80/2M/E7E7E7E7E0',
@@ -36,7 +37,7 @@ if __name__ == '__main__':
         print('Waiting for parameters to be downloaded...')
         swarm.parallel(helpFun.wait_for_param_download)
         print('Initializing...')
-        helpFun.init_swarm(swarm, forceFalloff, targetForce, avoidRange, avoidForce)
+        helpFun.init_swarm(swarm, forceFalloff, targetForce, avoidRange, avoidForce, maxLength)
         print('Resetting timers...')
         swarm.parallel(helpFun.reset_timer)
         print("###################################")

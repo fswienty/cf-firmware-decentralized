@@ -59,6 +59,7 @@ static float forceFalloff = 1.5;
 static float targetForce = 0.3;
 static float avoidRange = 1.0;
 static float avoidForce = 1.5;
+static float maxLength = 1.0;
 
 
 static void communicate()
@@ -240,6 +241,7 @@ void appMain()
   PARAM_ADD(PARAM_FLOAT, targetForce, &targetForce)
   PARAM_ADD(PARAM_FLOAT, avoidRange, &avoidRange)
   PARAM_ADD(PARAM_FLOAT, avoidForce, &avoidForce)
+  PARAM_ADD(PARAM_FLOAT, maxLength, &maxLength)
   PARAM_GROUP_STOP(drone)
 
   // debug variables which can be written and read from the pc and the drone
@@ -360,8 +362,8 @@ void appMain()
         Vector3 moveVector = (Vector3){0, 0, 0};
         moveVector = add(moveVector, getTargetVector());
         moveVector = add(moveVector, getAvoidVector(&isInAvoidRange));
+        moveVector = clamp(moveVector, maxLength);
         moveVector = add(moveVector, packetData.pos);
-        moveVector = clamp(moveVector, 0.5f);
         setHoverSetpoint(&setpoint, moveVector.x, moveVector.y, moveVector.z);
         if (isInAvoidRange)
         {
