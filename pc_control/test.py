@@ -3,13 +3,15 @@ import time
 import numpy as np
 import os
 
-
+initData = {
+    'forceFalloff': 1.0,
+    'targetForce': 0.3,
+    'avoidRange': 0.7,
+    'avoidForce': 1.5,
+    'maxLength': 0.1,
+}
 
 if __name__ == '__main__':
-    testStr = ""
-    testSplit = testStr.split()
-    print("#####################")
-    print(testStr)
-    print(testSplit)
-    if (testSplit != []):
-        print(testSplit[0])
+    print(type(initData))
+    print(initData['forceFalloff'])
+    print(type(initData['forceFalloff']))

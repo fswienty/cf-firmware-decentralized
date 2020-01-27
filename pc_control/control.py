@@ -11,18 +11,33 @@ from cflib.crazyflie.swarm import Swarm
 # from cflib.crazyflie.console import Console
 
 
-forceFalloff = 1.0
-targetForce = 0.3
-avoidRange = 0.7
-avoidForce = 1.5
-maxLength = 0.1
+# forceFalloff = 1.0
+# targetForce = 0.3
+# avoidRange = 0.7
+# avoidForce = 1.5
+# maxLength = 0.1
 
 uris = [
     'radio://0/80/2M/E7E7E7E7E0',
     # 'radio://0/80/2M/E7E7E7E7E1',
-    'radio://0/80/2M/E7E7E7E7E4',
+    # 'radio://0/80/2M/E7E7E7E7E4',
     # 'radio://0/80/2M/E7E7E7E7E9',
 ]
+
+# class InitData:
+#     forceFalloff = 1.0
+#     targetForce = 0.3
+#     avoidRange = 0.7
+#     avoidForce = 1.5
+#     maxLength = 0.1
+
+initData = {
+    'forceFalloff': 1.0,
+    'targetForce': 0.3,
+    'avoidRange': 0.7,
+    'avoidForce': 1.5,
+    'maxLength': 0.1,
+}
 
 
 if __name__ == '__main__':
@@ -33,11 +48,11 @@ if __name__ == '__main__':
 
     with Swarm(uris, factory=factory) as swarm:
         print('Resetting estimators...')
-        swarm.parallel(helpFun.reset_estimator)
+        # swarm.parallel(helpFun.reset_estimator)
         print('Waiting for parameters to be downloaded...')
         swarm.parallel(helpFun.wait_for_param_download)
         print('Initializing...')
-        helpFun.init_swarm(swarm, forceFalloff, targetForce, avoidRange, avoidForce, maxLength)
+        helpFun.init_swarm(swarm, initData)
         print('Resetting timers...')
         swarm.parallel(helpFun.reset_timer)
         print("###################################")
