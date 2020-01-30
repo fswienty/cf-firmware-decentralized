@@ -12,9 +12,9 @@ from cflib.crazyflie.swarm import Swarm
 
 
 uris = [
-    # 'radio://0/80/2M/E7E7E7E7E0',
+    'radio://0/80/2M/E7E7E7E7E0',
     # 'radio://0/80/2M/E7E7E7E7E1',
-    'radio://0/80/2M/E7E7E7E7E4',
+    # 'radio://0/80/2M/E7E7E7E7E4',
     # 'radio://0/80/2M/E7E7E7E7E9',
 ]
 

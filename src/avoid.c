@@ -265,10 +265,8 @@ void appMain()
         consolePrintf("Timer reset for drone %d \n", packetData.id);
         break;
       case 10:  // info
-        // consolePrintf("%s\n", "##############");
         consolePrintf("%d: target x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)targetPosition.x, (double)targetPosition.y, (double)targetPosition.z);
-        // consolePrintf("triggerId: %d\n", prevDroneId);
-        // consolePrintf("receivedId: %d\n", lastReceivedDroneId);
+        consolePrintf("%d: forceFalloff=%.2f targetForce=%.2f avoidRange=%.2f avoidForce=%.2f maxLength=%.2f \n", packetData.id, (double)forceFalloff, (double)targetForce, (double)avoidRange, (double)avoidForce, (double)maxLength);
         break;
       default:
         break;
@@ -303,11 +301,10 @@ void appMain()
         break;
       case flying:
         communicate();
-        Vector3 moveVector = (Vector3){0, 0, 0};
+        Vector3 moveVector = packetData.pos;
         moveVector = add(moveVector, getTargetVector());
         moveVector = add(moveVector, getAvoidVector(&isInAvoidRange));
         moveVector = clamp(moveVector, maxLength);
-        moveVector = add(moveVector, packetData.pos);
         setHoverSetpoint(&setpoint, moveVector.x, moveVector.y, moveVector.z);
         if (isInAvoidRange)
         {
