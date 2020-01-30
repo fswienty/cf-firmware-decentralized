@@ -20,7 +20,7 @@ from cflib.crazyflie.swarm import Swarm
 uris = [
     'radio://0/80/2M/E7E7E7E7E0',
     # 'radio://0/80/2M/E7E7E7E7E1',
-    # 'radio://0/80/2M/E7E7E7E7E4',
+    'radio://0/80/2M/E7E7E7E7E4',
     # 'radio://0/80/2M/E7E7E7E7E9',
 ]
 
@@ -48,7 +48,7 @@ if __name__ == '__main__':
 
     with Swarm(uris, factory=factory) as swarm:
         print('Resetting estimators...')
-        # swarm.parallel(helpFun.reset_estimator)
+        swarm.parallel(helpFun.reset_estimator)
         print('Waiting for parameters to be downloaded...')
         swarm.parallel(helpFun.wait_for_param_download)
         print('Initializing...')

@@ -1,0 +1,3 @@
+c: circle
+sq: square
+i: inverted, ie the formation of the same name (without the -i) but scaled by -1

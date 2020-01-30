@@ -54,7 +54,7 @@ static Vector3 otherPositions[OTHER_DRONES_ARRAY_SIZE];  // array of the positio
 // static uint8_t lastReceivedDroneId;  // id of the last received packetData
 static uint8_t droneAmount;  // amount of drones. SET DURING INITIALIZATION, DON'T CHANGE AT RUNTIME.
 static uint8_t timer;
-// variables for the avoidance algorithm
+// variables for the avoidance algorithm, values are set from the pc. default values exist just in case something goes wrong.
 static float forceFalloff = 1.5;
 static float targetForce = 0.3;
 static float avoidRange = 1.0;
@@ -82,60 +82,6 @@ void p2pCallbackHandler(P2PPacket *p)
   otherPositions[receivedPacketData.id] = receivedPacketData.pos;
   // consolePrintf("%d <- id=%d\n", packetData.id, receivedPacketData.id);
 }
-
-static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
-{
-  sp->mode.x = modeAbs;
-  sp->mode.y = modeAbs;
-  sp->mode.z = modeAbs;
-  sp->mode.yaw = modeAbs;
-
-  sp->position.x = x;
-  sp->position.y = y;
-  sp->position.z = z;
-  sp->attitude.yaw = 0;
-}
-
-// static void approachTargetAvoidOthers(setpoint_t *sp, bool *isInAvoidRange)
-// {
-//   Vector3 dronePosition = packetData.pos;
-//   Vector3 sum = (Vector3){0, 0, 0};
-//   *isInAvoidRange = false;
-//   // target stuff
-//   Vector3 droneToTarget = sub(dronePosition, targetPosition);
-//   if(magnitude(droneToTarget) > forceFalloff)
-//   {
-//     droneToTarget = norm(droneToTarget);
-//   }
-//   else
-//   {
-//     droneToTarget = mul(droneToTarget, 1 / forceFalloff);
-//   }
-//   droneToTarget = mul(droneToTarget, targetForce);
-//   sum = add(sum, droneToTarget);
-//   // other drones stuff (maybe quit early if otherPositions[i].x == DUMMY_POSITION?)
-//   for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
-//   {
-//     Vector3 otherToDrone = sub(otherPositions[i], dronePosition);
-//     float distance = magnitude(otherToDrone);
-//     if(distance < avoidRange)
-//     {
-//       *isInAvoidRange = true;
-//       otherToDrone = norm(otherToDrone);
-//       otherToDrone = mul(otherToDrone, 1 - (distance / avoidRange));
-//       otherToDrone = mul(otherToDrone, avoidForce);
-//       sum = add(sum, otherToDrone);
-//     }
-//   }
-//   // add sum of forces to drone position and apply as setpoint
-//   if (packetData.id == 4)
-//   {
-//     consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)sum.x, (double)sum.y, (double)sum.z);
-//   }
-//   sum = add(dronePosition, sum);
-//   setHoverSetpoint(sp, sum.x, sum.y, sum.z);
-// }
-
 
 static Vector3 getTargetVector()
 {
@@ -173,18 +119,17 @@ static Vector3 getAvoidVector(bool *isInAvoidRange)
   return sum;
 }
 
-static void checkAvoidRange(bool *isInAvoidRange)
+static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
 {
-  *isInAvoidRange = false;
-  Vector3 dronePosition = packetData.pos;
-  for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
-  {
-    Vector3 droneToOther = sub(dronePosition, otherPositions[i]);
-    if (magnitude(droneToOther) < avoidRange)
-    {
-      *isInAvoidRange = true;
-    }
-  }
+  sp->mode.x = modeAbs;
+  sp->mode.y = modeAbs;
+  sp->mode.z = modeAbs;
+  sp->mode.yaw = modeAbs;
+
+  sp->position.x = x;
+  sp->position.y = y;
+  sp->position.z = z;
+  sp->attitude.yaw = 0;
 }
 
 static void moveVertical(setpoint_t *sp, float zVelocity)
@@ -297,17 +242,17 @@ void appMain()
 
     switch (droneCmd)
     {
-      case 1:
+      case 1:  // start
         state = starting;
         break;
-      case 2:
+      case 2:  // land
         state = landing;
         break;
-      case 3:  // comm
+      case 3:  // debug1
         state = debug1;
         consolePrintf("Drone %d entered debug1 state \n", packetData.id);
         break;
-      case 4:
+      case 4:  // debug2
         state = debug2;
         consolePrintf("Drone %d entered debug2 state \n", packetData.id);
         break;
@@ -315,13 +260,13 @@ void appMain()
         state = enginesOff;
         consolePrintf("Drone %d entered enginesOff state \n", packetData.id);
         break;
-      case 6:  // reset timer
+      case 6:  // reset
         timer = 0;
         consolePrintf("Timer reset for drone %d \n", packetData.id);
         break;
-      case 10:  // print debug info
+      case 10:  // info
         // consolePrintf("%s\n", "##############");
-        consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)targetPosition.x, (double)targetPosition.y, (double)targetPosition.z);
+        consolePrintf("%d: target x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)targetPosition.x, (double)targetPosition.y, (double)targetPosition.z);
         // consolePrintf("triggerId: %d\n", prevDroneId);
         // consolePrintf("receivedId: %d\n", lastReceivedDroneId);
         break;
@@ -376,7 +321,11 @@ void appMain()
         break;
       case debug1:
         communicate();
-        checkAvoidRange(&isInAvoidRange);
+        Vector3 avoidVector = getAvoidVector(&isInAvoidRange);
+        if (packetData.id == 4)
+        {
+          consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)avoidVector.x, (double)avoidVector.y, (double)avoidVector.z);
+        }
         if (isInAvoidRange)
         {
           ledSetAll();
@@ -401,3 +350,43 @@ void appMain()
 // ledSet(LED_BLUE_L, true);
 
 //int size = sizeof(array) / sizeof(array[0]);
+
+// static void approachTargetAvoidOthers(setpoint_t *sp, bool *isInAvoidRange)
+// {
+//   Vector3 dronePosition = packetData.pos;
+//   Vector3 sum = (Vector3){0, 0, 0};
+//   *isInAvoidRange = false;
+//   // target stuff
+//   Vector3 droneToTarget = sub(dronePosition, targetPosition);
+//   if(magnitude(droneToTarget) > forceFalloff)
+//   {
+//     droneToTarget = norm(droneToTarget);
+//   }
+//   else
+//   {
+//     droneToTarget = mul(droneToTarget, 1 / forceFalloff);
+//   }
+//   droneToTarget = mul(droneToTarget, targetForce);
+//   sum = add(sum, droneToTarget);
+//   // other drones stuff (maybe quit early if otherPositions[i].x == DUMMY_POSITION?)
+//   for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
+//   {
+//     Vector3 otherToDrone = sub(otherPositions[i], dronePosition);
+//     float distance = magnitude(otherToDrone);
+//     if(distance < avoidRange)
+//     {
+//       *isInAvoidRange = true;
+//       otherToDrone = norm(otherToDrone);
+//       otherToDrone = mul(otherToDrone, 1 - (distance / avoidRange));
+//       otherToDrone = mul(otherToDrone, avoidForce);
+//       sum = add(sum, otherToDrone);
+//     }
+//   }
+//   // add sum of forces to drone position and apply as setpoint
+//   if (packetData.id == 4)
+//   {
+//     consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)sum.x, (double)sum.y, (double)sum.z);
+//   }
+//   sum = add(dronePosition, sum);
+//   setHoverSetpoint(sp, sum.x, sum.y, sum.z);
+// }
