@@ -303,7 +303,6 @@ void appMain()
         break;
       case flying:
         communicate();
-        // approachTargetAvoidOthers(&setpoint, &isInAvoidRange);
         Vector3 moveVector = (Vector3){0, 0, 0};
         moveVector = add(moveVector, getTargetVector());
         moveVector = add(moveVector, getAvoidVector(&isInAvoidRange));

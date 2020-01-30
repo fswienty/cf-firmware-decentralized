@@ -11,25 +11,12 @@ from cflib.crazyflie.swarm import Swarm
 # from cflib.crazyflie.console import Console
 
 
-# forceFalloff = 1.0
-# targetForce = 0.3
-# avoidRange = 0.7
-# avoidForce = 1.5
-# maxLength = 0.1
-
 uris = [
-    'radio://0/80/2M/E7E7E7E7E0',
+    # 'radio://0/80/2M/E7E7E7E7E0',
     # 'radio://0/80/2M/E7E7E7E7E1',
     'radio://0/80/2M/E7E7E7E7E4',
     # 'radio://0/80/2M/E7E7E7E7E9',
 ]
-
-# class InitData:
-#     forceFalloff = 1.0
-#     targetForce = 0.3
-#     avoidRange = 0.7
-#     avoidForce = 1.5
-#     maxLength = 0.1
 
 initData = {
     'forceFalloff': 1.0,
