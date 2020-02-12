@@ -288,6 +288,7 @@ void appMain()
           targetPosition.x = packetData.pos.x;
           targetPosition.y = packetData.pos.y;
           targetPosition.z = packetData.pos.z;
+          consolePrintf("%d entered flying state x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)targetPosition.x, (double)targetPosition.y, (double)targetPosition.z);
           state = flying;
         }
         break;
@@ -332,6 +333,7 @@ void appMain()
         }
         break;
       case debug2:
+        consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)packetData.pos.x, (double)packetData.pos.y, (double)packetData.pos.z);
         break;
     }
     commanderSetSetpoint(&setpoint, 3);

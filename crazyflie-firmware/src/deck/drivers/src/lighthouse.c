@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2018 Bitcraze AB
+ * Copyright (C) 2018-2019 Bitcraze AB
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,7 @@
 #include "deck.h"
 #include "log.h"
 #include "param.h"
+#include "statsCnt.h"
 
 #include "config.h"
 #include "FreeRTOS.h"
@@ -63,18 +64,31 @@
 //#endif
 
 baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
-{.origin = {-1.755063, -2.378910, 2.727174, }, .mat = {{0.569296, -0.795590, 0.207216, }, {0.750985, 0.605805, 0.262721, }, {-0.334551, 0.006050, 0.942358, }, }},
-{.origin = {1.653693, 2.383405, 2.723262, }, .mat = {{-0.646577, 0.740935, -0.181529, }, {-0.676042, -0.666786, -0.313627, }, {-0.353419, -0.080062, 0.932033, }, }},
+{.origin = {-1.745721, -2.282978, 2.634396, }, .mat = {{0.599612, -0.755603, 0.263686, }, {0.672125, 0.654316, 0.346582, }, {-0.434412, -0.030585, 0.900195, }, }},
+{.origin = {1.709642, 2.432454, 2.569273, }, .mat = {{-0.513694, 0.806160, -0.293640, }, {-0.699773, -0.591698, -0.400263, }, {-0.496422, -0.000131, 0.868081, }, }},
 };
-
-baseStationEulerAngles_t lighthouseBaseStationAngles[2];
 
 // Uncomment if you want to force the Crazyflie to reflash the deck at each startup
 // #define FORCE_FLASH true
 
 static bool isInit = false;
 
-#if DISABLE_LIGHTHOUSE_DRIVER == 0
+#if DISABLE_LIGHTHOUSE_DRIVER == 1
+  void lightHouseGeometryDataUpdated() { /* Empty by design */ }
+#else
+
+baseStationEulerAngles_t lighthouseBaseStationAngles[2];
+static mat3d baseStationInvertedRotationMatrixes[2];
+
+// Sensor positions on the deck
+#define SENSOR_POS_W (0.015f / 2.0f)
+#define SENSOR_POS_L (0.030f / 2.0f)
+static vec3d sensorDeckPositions[4] = {
+    {-SENSOR_POS_L, SENSOR_POS_W, 0.0},
+    {-SENSOR_POS_L, -SENSOR_POS_W, 0.0},
+    {SENSOR_POS_L, SENSOR_POS_W, 0.0},
+    {SENSOR_POS_L, -SENSOR_POS_W, 0.0},
+};
 
 #ifndef FORCE_FLASH
 #define FORCE_FLASH false
@@ -107,24 +121,27 @@ INCBIN(bitstream, "blobs/lighthouse.bin");
 
 static void checkVersionAndBoot();
 
-static pulseProcessorResult_t angles[PULSE_PROCESSOR_N_SENSORS];
+static pulseProcessorResult_t angles;
 
 // Stats
 static bool comSynchronized = false;
 
-static int serialFrameCount = 0;
-static int frameCount = 0;
-static int cycleCount = 0;
-static int positionCount = 0;
+#define ONE_SECOND 1000
+#define HALF_SECOND 500
+static STATS_CNT_RATE_DEFINE(serialFrameRate, ONE_SECOND);
+static STATS_CNT_RATE_DEFINE(frameRate, ONE_SECOND);
+static STATS_CNT_RATE_DEFINE(cycleRate, ONE_SECOND);
+static STATS_CNT_RATE_DEFINE(positionRate, ONE_SECOND);
 
-static float serialFrameRate = 0.0;
-static float frameRate = 0.0;
-static float cycleRate = 0.0;
-static float positionRate = 0.0;
+static STATS_CNT_RATE_DEFINE(estBs0Rate, HALF_SECOND);
+static STATS_CNT_RATE_DEFINE(estBs1Rate, HALF_SECOND);
+static statsCntRateLogger_t* bsEstRates[2] = {&estBs0Rate, &estBs1Rate};
+
+static STATS_CNT_RATE_DEFINE(bs0Rate, HALF_SECOND);
+static STATS_CNT_RATE_DEFINE(bs1Rate, HALF_SECOND);
+static statsCntRateLogger_t* bsRates[2] = {&bs0Rate, &bs1Rate};
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
-
-static uint32_t latestStatsTimeMs = 0;
 
 typedef union frame_u {
   struct {
@@ -148,36 +165,32 @@ static bool getFrame(frame_t *frame)
   return (frame->sync == 0 || (syncCounter==7));
 }
 
-static void resetStats() {
-  serialFrameCount = 0;
-  frameCount = 0;
-  cycleCount = 0;
-  positionCount = 0;
-}
-
-static void calculateStats(uint32_t nowMs) {
-  double time = (nowMs - latestStatsTimeMs) / 1000.0;
-  serialFrameRate = serialFrameCount / time;
-  frameRate = frameCount / time;
-  cycleRate = cycleCount / time;
-  positionRate = positionCount / time;
-
-  resetStats();
-}
-
 static vec3d position;
-static positionMeasurement_t ext_pos;
 static float deltaLog;
 
-static void estimatePosition(pulseProcessorResult_t angles[]) {
+static positionMeasurement_t ext_pos;
+static float sweepStd = 0.0004;
+
+// Method used to estimate position
+// 0 = Position calculated outside the estimator using intersection point of beams.
+//     Yaw error calculated outside the estimator. Position and yaw error is pushed to the
+//     estimator as pre-calculated.
+// 1 = Sweep angles pushed into the estimator. Yaw error calculated outside the estimator
+//     and pushed to the estimator as a pre-calculated value.
+static uint8_t estimationMethod = 1;
+
+static void estimatePositionCrossingBeams(pulseProcessorResult_t* angles, int baseStation) {
   memset(&ext_pos, 0, sizeof(ext_pos));
   int sensorsUsed = 0;
   float delta;
 
   // Average over all sensors with valid data
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-      if (angles[sensor].validCount == 4) {
-        lighthouseGeometryGetPositionFromRayIntersection(lighthouseBaseStationsGeometry, (void*)angles[sensor].correctedAngles, position, &delta);
+      pulseProcessorBaseStationMeasuremnt_t* bs0Measurement = &angles->sensorMeasurements[sensor].baseStatonMeasurements[0];
+      pulseProcessorBaseStationMeasuremnt_t* bs1Measurement = &angles->sensorMeasurements[sensor].baseStatonMeasurements[1];
+
+      if (bs0Measurement->validCount == PULSE_PROCESSOR_N_SWEEPS && bs1Measurement->validCount == PULSE_PROCESSOR_N_SWEEPS) {
+        lighthouseGeometryGetPositionFromRayIntersection(lighthouseBaseStationsGeometry, bs0Measurement->correctedAngles, bs1Measurement->correctedAngles, position, &delta);
 
         deltaLog = delta;
 
@@ -186,7 +199,7 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
         ext_pos.z += position[2];
         sensorsUsed++;
 
-        positionCount++;
+        STATS_CNT_RATE_EVENT(&positionRate);
       }
   }
 
@@ -195,14 +208,38 @@ static void estimatePosition(pulseProcessorResult_t angles[]) {
   ext_pos.z /= sensorsUsed;
 
   // Make sure we feed sane data into the estimator
-  if (!isfinite(ext_pos.pos[0]) || !isfinite(ext_pos.pos[1]) || !isfinite(ext_pos.pos[2])) {
-    return;
+  if (isfinite(ext_pos.pos[0]) && isfinite(ext_pos.pos[1]) && isfinite(ext_pos.pos[2])) {
+    ext_pos.stdDev = 0.01;
+    estimatorEnqueuePosition(&ext_pos);
   }
-  ext_pos.stdDev = 0.01;
-  estimatorEnqueuePosition(&ext_pos);
 }
 
-static bool estimateYawDeltaOneBaseStation(const int bs, const pulseProcessorResult_t angles[], baseStationGeometry_t baseStationGeometries[], const float cfPos[3], const float n[3], const arm_matrix_instance_f32 *RR, float *yawDelta) {
+static void estimatePositionSweeps(pulseProcessorResult_t* angles, int baseStation) {
+  for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
+    pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &angles->sensorMeasurements[sensor].baseStatonMeasurements[baseStation];
+    if (bsMeasurement->validCount == PULSE_PROCESSOR_N_SWEEPS) {
+      sweepAngleMeasurement_t sweepAngles;
+      sweepAngles.angleX = bsMeasurement->correctedAngles[0];
+      sweepAngles.angleY = bsMeasurement->correctedAngles[1];
+
+      if (sweepAngles.angleX != 0 && sweepAngles.angleY != 0) {
+        sweepAngles.stdDevX = sweepStd;
+        sweepAngles.stdDevY = sweepStd;
+
+        sweepAngles.sensorPos = &sensorDeckPositions[sensor];
+
+        sweepAngles.baseStationPos = &lighthouseBaseStationsGeometry[baseStation].origin;
+        sweepAngles.baseStationRot = &lighthouseBaseStationsGeometry[baseStation].mat;
+        sweepAngles.baseStationRotInv = &baseStationInvertedRotationMatrixes[baseStation];
+
+        estimatorEnqueueSweepAngles(&sweepAngles);
+        STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
+      }
+    }
+  }
+}
+
+static bool estimateYawDeltaOneBaseStation(const int bs, const pulseProcessorResult_t* angles, baseStationGeometry_t baseStationGeometries[], const float cfPos[3], const float n[3], const arm_matrix_instance_f32 *RR, float *yawDelta) {
   baseStationGeometry_t* baseStationGeometry = &baseStationGeometries[bs];
 
   vec3d baseStationPos;
@@ -210,7 +247,8 @@ static bool estimateYawDeltaOneBaseStation(const int bs, const pulseProcessorRes
 
   vec3d rays[PULSE_PROCESSOR_N_SENSORS];
   for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    lighthouseGeometryGetRay(baseStationGeometry, angles[sensor].correctedAngles[bs][0], angles[sensor].correctedAngles[bs][1], rays[sensor]);
+    const pulseProcessorBaseStationMeasuremnt_t* bsMeasurement = &angles->sensorMeasurements[sensor].baseStatonMeasurements[bs];
+    lighthouseGeometryGetRay(baseStationGeometry, bsMeasurement->correctedAngles[0], bsMeasurement->correctedAngles[1], rays[sensor]);
   }
 
   // Intersection points of rays and the deck
@@ -225,7 +263,7 @@ static bool estimateYawDeltaOneBaseStation(const int bs, const pulseProcessorRes
   // Calculate positions of sensors. Rotate relative postiions using the rotation matrix and add current position
   vec3d sensorPoints[PULSE_PROCESSOR_N_SENSORS];
   for (int sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
-    lighthouseGeometryGetSensorPosition(cfPos, RR, sensor, sensorPoints[sensor]);
+    lighthouseGeometryGetSensorPosition(cfPos, RR, sensorDeckPositions[sensor], sensorPoints[sensor]);
   }
 
   // Calculate diagonals (sensors 0 - 3 and 1 - 2) for intersection and sensor points
@@ -245,7 +283,7 @@ static bool estimateYawDeltaOneBaseStation(const int bs, const pulseProcessorRes
   }
 }
 
-static void estimateYaw(pulseProcessorResult_t angles[]) {
+static void estimateYaw(pulseProcessorResult_t* angles, int baseStation) {
   // TODO Most of these calculations should be moved into the estimator instead. It is a
   // bit dirty to get the state from the kalman filer here and calculate the yaw error outside
   // the estimator, but it will do for now.
@@ -265,14 +303,77 @@ static void estimateYaw(pulseProcessorResult_t angles[]) {
 
   // Calculate yaw delta using only one base station for now
   float yawDelta;
-  if (estimateYawDeltaOneBaseStation(0, angles, lighthouseBaseStationsGeometry, cfPos, n, &RR, &yawDelta)) {
-    estimatorEnqueueYawError(yawDelta);
+  if (estimateYawDeltaOneBaseStation(baseStation, angles, lighthouseBaseStationsGeometry, cfPos, n, &RR, &yawDelta)) {
+    yawErrorMeasurement_t yawDeltaMeasurement = {.yawError = yawDelta, .stdDev = 0.01};
+    estimatorEnqueueYawError(&yawDeltaMeasurement);
   }
 }
 
-static void estimatePose(pulseProcessorResult_t angles[]) {
-  estimatePosition(angles);
-  estimateYaw(angles);
+static void estimatePoseCrossingBeams(pulseProcessorResult_t* angles, int baseStation) {
+  estimatePositionCrossingBeams(angles, baseStation);
+  estimateYaw(angles, baseStation);
+}
+
+static void estimatePoseSweeps(pulseProcessorResult_t* angles, int baseStation) {
+  estimatePositionSweeps(angles, baseStation);
+  estimateYaw(angles, baseStation);
+}
+
+static void invertRotationMatrix(mat3d rot, mat3d inverted) {
+  // arm_mat_inverse_f32() alters the original matrix in the process, must make a copy to work from
+  float bs_r_tmp[3][3];
+  memcpy(bs_r_tmp, (float32_t *)rot, sizeof(bs_r_tmp));
+  arm_matrix_instance_f32 basestation_rotation_matrix_tmp = {3, 3, (float32_t *)bs_r_tmp};
+
+  arm_matrix_instance_f32 basestation_rotation_matrix_inv = {3, 3, (float32_t *)inverted};
+  arm_mat_inverse_f32(&basestation_rotation_matrix_tmp, &basestation_rotation_matrix_inv);
+}
+
+static void usePulseResultCrossingBeams(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int axis) {
+  if (basestation == 1 && axis == sweepDirection_y) {
+    STATS_CNT_RATE_EVENT(&cycleRate);
+
+    pulseProcessorApplyCalibration(appState, angles, 0);
+    pulseProcessorApplyCalibration(appState, angles, 1);
+
+    estimatePoseCrossingBeams(angles, 1);
+
+    pulseProcessorClear(angles, 0);
+    pulseProcessorClear(angles, 1);
+  }
+}
+
+static void usePulseResultSweeps(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int axis) {
+  if (axis == sweepDirection_y) {
+    STATS_CNT_RATE_EVENT(&cycleRate);
+
+    pulseProcessorApplyCalibration(appState, angles, basestation);
+
+    estimatePoseSweeps(angles, basestation);
+
+    pulseProcessorClear(angles, basestation);
+  }
+}
+
+static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int basestation, int axis) {
+  switch(estimationMethod) {
+    case 0:
+      usePulseResultCrossingBeams(appState, angles, basestation, axis);
+      break;
+    case 1:
+      usePulseResultSweeps(appState, angles, basestation, axis);
+      break;
+    default:
+      break;
+  }
+}
+
+void lightHouseGeometryDataUpdated() {
+  lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[0],&lighthouseBaseStationAngles[0]);
+  lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[1],&lighthouseBaseStationAngles[1]);
+
+  invertRotationMatrix(lighthouseBaseStationsGeometry[0].mat, baseStationInvertedRotationMatrixes[0]);
+  invertRotationMatrix(lighthouseBaseStationsGeometry[1].mat, baseStationInvertedRotationMatrixes[1]);
 }
 
 static void lighthouseTask(void *param)
@@ -286,9 +387,7 @@ static void lighthouseTask(void *param)
   int basestation;
   int axis;
 
-  // Get the eulerangles from the rotation matrix of the basestations
-  lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[0],&lighthouseBaseStationAngles[0]);
-  lighthouseGeometryCalculateAnglesFromRotationMatrix(&lighthouseBaseStationsGeometry[1],&lighthouseBaseStationAngles[1]);
+  lightHouseGeometryDataUpdated();
 
   systemWaitStart();
 
@@ -327,25 +426,14 @@ static void lighthouseTask(void *param)
         continue;
       }
 
-      serialFrameCount++;
+      STATS_CNT_RATE_EVENT(&serialFrameRate);
 
       pulseWidth[frame.sensor] = frame.width;
 
-      if (pulseProcessorProcessPulse(&ppState, frame.sensor, frame.timestamp, frame.width, angles, &basestation, &axis)) {
-        frameCount++;
-        if (basestation == 1 && axis == 1) {
-          cycleCount++;
-
-          pulseProcessorApplyCalibration(&ppState, angles);
-          estimatePose(angles);
-          pulseProcessorClear(angles);
-        }
-      }
-
-      uint32_t nowMs = T2M(xTaskGetTickCount());
-      if ((nowMs - latestStatsTimeMs) > 1000) {
-        calculateStats(nowMs);
-        latestStatsTimeMs = nowMs;
+      if (pulseProcessorProcessPulse(&ppState, frame.sensor, frame.timestamp, frame.width, &angles, &basestation, &axis)) {
+        STATS_CNT_RATE_EVENT(&frameRate);
+        STATS_CNT_RATE_EVENT(bsRates[basestation]);
+        usePulseResult(&ppState, &angles, basestation, axis);
       }
 
       synchronized = getFrame(&frame);
@@ -436,29 +524,29 @@ static const DeckDriver lighthouse_deck = {
 DECK_DRIVER(lighthouse_deck);
 
 LOG_GROUP_START(lighthouse)
-LOG_ADD(LOG_FLOAT, rawAngle0x, &angles[0].angles[0][0])
-LOG_ADD(LOG_FLOAT, rawAngle0y, &angles[0].angles[0][1])
-LOG_ADD(LOG_FLOAT, rawAngle1x, &angles[0].angles[1][0])
-LOG_ADD(LOG_FLOAT, rawAngle1y, &angles[0].angles[1][1])
-LOG_ADD(LOG_FLOAT, angle0x, &angles[0].correctedAngles[0][0])
-LOG_ADD(LOG_FLOAT, angle0y, &angles[0].correctedAngles[0][1])
-LOG_ADD(LOG_FLOAT, angle1x, &angles[0].correctedAngles[1][0])
-LOG_ADD(LOG_FLOAT, angle1y, &angles[0].correctedAngles[1][1])
+LOG_ADD(LOG_FLOAT, rawAngle0x, &angles.sensorMeasurements[0].baseStatonMeasurements[0].angles[0])
+LOG_ADD(LOG_FLOAT, rawAngle0y, &angles.sensorMeasurements[0].baseStatonMeasurements[0].angles[1])
+LOG_ADD(LOG_FLOAT, rawAngle1x, &angles.sensorMeasurements[0].baseStatonMeasurements[1].angles[0])
+LOG_ADD(LOG_FLOAT, rawAngle1y, &angles.sensorMeasurements[0].baseStatonMeasurements[1].angles[1])
+LOG_ADD(LOG_FLOAT, angle0x, &angles.sensorMeasurements[0].baseStatonMeasurements[0].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle0y, &angles.sensorMeasurements[0].baseStatonMeasurements[0].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle1x, &angles.sensorMeasurements[0].baseStatonMeasurements[1].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle1y, &angles.sensorMeasurements[0].baseStatonMeasurements[1].correctedAngles[1])
 
-LOG_ADD(LOG_FLOAT, angle0x_1, &angles[1].correctedAngles[0][0])
-LOG_ADD(LOG_FLOAT, angle0y_1, &angles[1].correctedAngles[0][1])
-LOG_ADD(LOG_FLOAT, angle1x_1, &angles[1].correctedAngles[1][0])
-LOG_ADD(LOG_FLOAT, angle1y_1, &angles[1].correctedAngles[1][1])
+LOG_ADD(LOG_FLOAT, angle0x_1, &angles.sensorMeasurements[1].baseStatonMeasurements[0].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle0y_1, &angles.sensorMeasurements[1].baseStatonMeasurements[0].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle1x_1, &angles.sensorMeasurements[1].baseStatonMeasurements[1].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle1y_1, &angles.sensorMeasurements[1].baseStatonMeasurements[1].correctedAngles[1])
 
-LOG_ADD(LOG_FLOAT, angle0x_2, &angles[2].correctedAngles[0][0])
-LOG_ADD(LOG_FLOAT, angle0y_2, &angles[2].correctedAngles[0][1])
-LOG_ADD(LOG_FLOAT, angle1x_2, &angles[2].correctedAngles[1][0])
-LOG_ADD(LOG_FLOAT, angle1y_2, &angles[2].correctedAngles[1][1])
+LOG_ADD(LOG_FLOAT, angle0x_2, &angles.sensorMeasurements[2].baseStatonMeasurements[0].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle0y_2, &angles.sensorMeasurements[2].baseStatonMeasurements[0].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle1x_2, &angles.sensorMeasurements[2].baseStatonMeasurements[1].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle1y_2, &angles.sensorMeasurements[2].baseStatonMeasurements[1].correctedAngles[1])
 
-LOG_ADD(LOG_FLOAT, angle0x_3, &angles[3].correctedAngles[0][0])
-LOG_ADD(LOG_FLOAT, angle0y_3, &angles[3].correctedAngles[0][1])
-LOG_ADD(LOG_FLOAT, angle1x_3, &angles[3].correctedAngles[1][0])
-LOG_ADD(LOG_FLOAT, angle1y_3, &angles[3].correctedAngles[1][1])
+LOG_ADD(LOG_FLOAT, angle0x_3, &angles.sensorMeasurements[3].baseStatonMeasurements[0].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle0y_3, &angles.sensorMeasurements[3].baseStatonMeasurements[0].correctedAngles[1])
+LOG_ADD(LOG_FLOAT, angle1x_3, &angles.sensorMeasurements[3].baseStatonMeasurements[1].correctedAngles[0])
+LOG_ADD(LOG_FLOAT, angle1y_3, &angles.sensorMeasurements[3].baseStatonMeasurements[1].correctedAngles[1])
 
 LOG_ADD(LOG_FLOAT, x, &position[0])
 LOG_ADD(LOG_FLOAT, y, &position[1])
@@ -466,10 +554,16 @@ LOG_ADD(LOG_FLOAT, z, &position[2])
 
 LOG_ADD(LOG_FLOAT, delta, &deltaLog)
 
-LOG_ADD(LOG_FLOAT, serRt, &serialFrameRate)
-LOG_ADD(LOG_FLOAT, frmRt, &frameRate)
-LOG_ADD(LOG_FLOAT, cycleRt, &cycleRate)
-LOG_ADD(LOG_FLOAT, posRt, &positionRate)
+STATS_CNT_RATE_LOG_ADD(serRt, &serialFrameRate)
+STATS_CNT_RATE_LOG_ADD(frmRt, &frameRate)
+STATS_CNT_RATE_LOG_ADD(cycleRt, &cycleRate)
+STATS_CNT_RATE_LOG_ADD(posRt, &positionRate)
+STATS_CNT_RATE_LOG_ADD(estBs0Rt, &estBs0Rate)
+STATS_CNT_RATE_LOG_ADD(estBs1Rt, &estBs1Rate)
+
+STATS_CNT_RATE_LOG_ADD(bs0Rt, &bs0Rate)
+STATS_CNT_RATE_LOG_ADD(bs1Rt, &bs1Rate)
+
 
 LOG_ADD(LOG_UINT16, width0, &pulseWidth[0])
 #if PULSE_PROCESSOR_N_SENSORS > 1
@@ -484,6 +578,11 @@ LOG_ADD(LOG_UINT16, width3, &pulseWidth[3])
 
 LOG_ADD(LOG_UINT8, comSync, &comSynchronized)
 LOG_GROUP_STOP(lighthouse)
+
+PARAM_GROUP_START(lighthouse)
+PARAM_ADD(PARAM_UINT8, method, &estimationMethod)
+PARAM_ADD(PARAM_FLOAT, sweepStd, &sweepStd)
+PARAM_GROUP_STOP(lighthouse)
 
 #endif // DISABLE_LIGHTHOUSE_DRIVER
 
