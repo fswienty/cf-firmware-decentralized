@@ -302,10 +302,11 @@ void appMain()
         break;
       case flying:
         communicate();
-        Vector3 moveVector = packetData.pos;
-        moveVector = add(moveVector, getTargetVector());
+        Vector3 moveVector = getTargetVector();
         moveVector = add(moveVector, getAvoidVector(&isInAvoidRange));
         moveVector = clamp(moveVector, maxLength);
+        moveVector = add(moveVector, packetData.pos);
+        // consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)moveVector.x, (double)moveVector.y, (double)moveVector.z);
         setHoverSetpoint(&setpoint, moveVector.x, moveVector.y, moveVector.z);
         if (isInAvoidRange)
         {
