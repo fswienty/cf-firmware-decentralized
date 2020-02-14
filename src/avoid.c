@@ -35,7 +35,7 @@ typedef enum
   enginesOff,
   starting,
   landing,
-  flying,
+  active,
   debug1,
   debug2,
   debug3,
@@ -132,19 +132,6 @@ static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
   sp->attitude.yaw = 0;
 }
 
-static void moveVertical(setpoint_t *sp, float zVelocity)
-{
-  sp->mode.x = modeVelocity;
-  sp->mode.y = modeVelocity;
-  sp->mode.z = modeVelocity;
-  sp->mode.yaw = modeAbs;
-
-  sp->velocity.x = 0.0;
-  sp->velocity.y = 0.0;
-  sp->velocity.z = zVelocity;
-  sp->attitudeRate.yaw = 0.0;
-}
-
 static void shutOffEngines(setpoint_t *sp)
 {
   sp->mode.x = modeDisable;
@@ -160,6 +147,7 @@ void appMain()
   static setpoint_t setpoint;
   static State state = uninitialized;
   bool isInAvoidRange = false;  // true if the drone is close within avoidRange of another one
+  bool isLanding = false;  // true if the drone is requested to land
   
   timer = 0;
 
@@ -243,10 +231,18 @@ void appMain()
     switch (droneCmd)
     {
       case 1:  // start
-        state = starting;
+        targetPosition.x = packetData.pos.x;
+        targetPosition.y = packetData.pos.y;
+        targetPosition.z = 0.7f;
+        isLanding = false;
+        state = active;
         break;
       case 2:  // land
-        state = landing;
+        targetPosition.x = packetData.pos.x;
+        targetPosition.y = packetData.pos.y;
+        targetPosition.z = -1.0f;
+        isLanding = true;
+        state = active;
         break;
       case 3:  // debug1
         state = debug1;
@@ -281,26 +277,7 @@ void appMain()
         ledClearAll();
         shutOffEngines(&setpoint);
         break;
-      case starting:
-        moveVertical(&setpoint, 0.4);
-        if (packetData.pos.z > 0.7f)
-        {
-          targetPosition.x = packetData.pos.x;
-          targetPosition.y = packetData.pos.y;
-          targetPosition.z = packetData.pos.z;
-          consolePrintf("%d entered flying state x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)targetPosition.x, (double)targetPosition.y, (double)targetPosition.z);
-          state = flying;
-        }
-        break;
-      case landing:
-        moveVertical(&setpoint, -0.4);
-        if (packetData.pos.z < 0.05f)
-        {
-          state = enginesOff;
-          consolePrintf("Drone %d entered enginesOff state \n", packetData.id);
-        }
-        break;
-      case flying:
+      case active:
         communicate();
         Vector3 moveVector = getTargetVector();
         moveVector = add(moveVector, getAvoidVector(&isInAvoidRange));
@@ -315,6 +292,11 @@ void appMain()
         else
         {
           ledClearAll();
+        }
+        if (isLanding && packetData.pos.z < 0.05f)
+        {
+          state = enginesOff;
+          consolePrintf("Drone %d entered enginesOff state \n", packetData.id);
         }
         break;
       case debug1:
@@ -388,4 +370,39 @@ void appMain()
 //   }
 //   sum = add(dronePosition, sum);
 //   setHoverSetpoint(sp, sum.x, sum.y, sum.z);
+// }
+
+
+      // case starting:
+      //   moveVertical(&setpoint, 0.4);
+      //   if (packetData.pos.z > 0.7f)
+      //   {
+      //     targetPosition.x = packetData.pos.x;
+      //     targetPosition.y = packetData.pos.y;
+      //     targetPosition.z = packetData.pos.z;
+      //     consolePrintf("%d entered active state x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)targetPosition.x, (double)targetPosition.y, (double)targetPosition.z);
+      //     state = active;
+      //   }
+      //   break;
+      // case landing:
+      //   moveVertical(&setpoint, -0.4);
+      //   if (packetData.pos.z < 0.05f)
+      //   {
+      //     state = enginesOff;
+      //     consolePrintf("Drone %d entered enginesOff state \n", packetData.id);
+      //   }
+      //   break;
+
+      
+// static void moveVertical(setpoint_t *sp, float zVelocity)
+// {
+//   sp->mode.x = modeVelocity;
+//   sp->mode.y = modeVelocity;
+//   sp->mode.z = modeVelocity;
+//   sp->mode.yaw = modeAbs;
+
+//   sp->velocity.x = 0.0;
+//   sp->velocity.y = 0.0;
+//   sp->velocity.z = zVelocity;
+//   sp->attitudeRate.yaw = 0.0;
 // }

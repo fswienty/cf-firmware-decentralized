@@ -21,8 +21,8 @@ uris = [
 initData = {
     'forceFalloff': 1.0,
     'targetForce': 0.3,
-    'avoidRange': 0.7,
-    'avoidForce': 1.5,
+    'avoidRange': 1,
+    'avoidForce': 1.2,
     'maxLength': 0.2,
 }
 
