@@ -33,8 +33,6 @@ typedef enum
 {
   uninitialized,
   enginesOff,
-  starting,
-  landing,
   active,
   debug1,
   debug2,
@@ -43,7 +41,7 @@ typedef enum
 
 typedef struct _PacketData
 {
-  uint8_t id;
+  int id;
   Vector3 pos;
 } PacketData;  // size: ? + 12 bytes
 
@@ -203,7 +201,6 @@ void appMain()
     {
       timer = 0;
     }
-    // consolePrintf("Drone %d: timer=%d \n", packetData.id, timer);
 
     // don't execute the entire while loop before initialization happend
     if (state == uninitialized)
@@ -272,9 +269,21 @@ void appMain()
     switch (state)
     {
       case uninitialized:  // this case should never occur since the drone should have been initialized before the switch statement
-      case enginesOff:
       default:
         ledClearAll();
+        shutOffEngines(&setpoint);
+        break;
+      case enginesOff:
+        communicate();
+        getAvoidVector(&isInAvoidRange);
+        if (isInAvoidRange)
+        {
+          ledSetAll();
+        }
+        else
+        {
+          ledClearAll();
+        }
         shutOffEngines(&setpoint);
         break;
       case active:
