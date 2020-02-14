@@ -294,7 +294,7 @@ void appMain()
         break;
       case landing:
         moveVertical(&setpoint, -0.4);
-        if (packetData.pos.z < 0.15f)
+        if (packetData.pos.z < 0.05f)
         {
           state = enginesOff;
           consolePrintf("Drone %d entered enginesOff state \n", packetData.id);
