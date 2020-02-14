@@ -64,8 +64,8 @@
 //#endif
 
 baseStationGeometry_t lighthouseBaseStationsGeometry[2]  = {
-{.origin = {-1.745721, -2.282978, 2.634396, }, .mat = {{0.599612, -0.755603, 0.263686, }, {0.672125, 0.654316, 0.346582, }, {-0.434412, -0.030585, 0.900195, }, }},
-{.origin = {1.709642, 2.432454, 2.569273, }, .mat = {{-0.513694, 0.806160, -0.293640, }, {-0.699773, -0.591698, -0.400263, }, {-0.496422, -0.000131, 0.868081, }, }},
+{.origin = {-1.729026, -2.563113, 2.595364, }, .mat = {{0.542693, -0.829471, 0.132144, }, {0.747588, 0.548730, 0.374176, }, {-0.382880, -0.104273, 0.917894, }, }},
+{.origin = {1.576328, 2.265363, 2.678380, }, .mat = {{-0.468287, 0.850695, -0.238800, }, {-0.768707, -0.525503, -0.364604, }, {-0.435657, 0.012828, 0.900021, }, }},
 };
 
 // Uncomment if you want to force the Crazyflie to reflash the deck at each startup
@@ -177,7 +177,7 @@ static float sweepStd = 0.0004;
 //     estimator as pre-calculated.
 // 1 = Sweep angles pushed into the estimator. Yaw error calculated outside the estimator
 //     and pushed to the estimator as a pre-calculated value.
-static uint8_t estimationMethod = 1;
+static uint8_t estimationMethod = 0;
 
 static void estimatePositionCrossingBeams(pulseProcessorResult_t* angles, int baseStation) {
   memset(&ext_pos, 0, sizeof(ext_pos));
