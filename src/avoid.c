@@ -227,6 +227,8 @@ void appMain()
 
     switch (droneCmd)
     {
+      case 0:
+        break;
       case 1:  // start
         targetPosition.x = packetData.pos.x;
         targetPosition.y = packetData.pos.y;
@@ -268,24 +270,6 @@ void appMain()
 
     switch (state)
     {
-      case uninitialized:  // this case should never occur since the drone should have been initialized before the switch statement
-      default:
-        ledClearAll();
-        shutOffEngines(&setpoint);
-        break;
-      case enginesOff:
-        communicate();
-        getAvoidVector(&isInAvoidRange);
-        if (isInAvoidRange)
-        {
-          ledSetAll();
-        }
-        else
-        {
-          ledClearAll();
-        }
-        shutOffEngines(&setpoint);
-        break;
       case active:
         communicate();
         Vector3 moveVector = getTargetVector();
@@ -302,11 +286,24 @@ void appMain()
         {
           ledClearAll();
         }
-        if (isLanding && packetData.pos.z < 0.05f)
+        if (isLanding && packetData.pos.z < 0.15f)
         {
           state = enginesOff;
           consolePrintf("Drone %d entered enginesOff state \n", packetData.id);
         }
+        break;
+      case enginesOff:
+        communicate();
+        getAvoidVector(&isInAvoidRange);
+        if (isInAvoidRange)
+        {
+          ledSetAll();
+        }
+        else
+        {
+          ledClearAll();
+        }
+        shutOffEngines(&setpoint);
         break;
       case debug1:
         communicate();
@@ -326,6 +323,11 @@ void appMain()
         break;
       case debug2:
         consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)packetData.pos.x, (double)packetData.pos.y, (double)packetData.pos.z);
+        break;
+      case uninitialized:  // this case should never occur since the drone should have been initialized before the switch statement
+      default:
+        ledClearAll();
+        shutOffEngines(&setpoint);
         break;
     }
     commanderSetSetpoint(&setpoint, 3);
