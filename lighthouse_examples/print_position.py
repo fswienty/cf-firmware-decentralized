@@ -76,7 +76,7 @@ def start_position_printing(scf):
 
 if __name__ == '__main__':
     # URI to the Crazyflie to connect to
-    uri = 'radio://0/80/2M/E7E7E7E7E2'
+    uri = 'radio://0/80/2M/E7E7E7E7E0'
 
     # Initialize the low-level drivers (don't list the debug drivers)
     cflib.crtp.init_drivers(enable_debug_driver=False)

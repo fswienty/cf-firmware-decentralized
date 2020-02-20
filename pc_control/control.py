@@ -12,21 +12,22 @@ from cflib.crazyflie.swarm import Swarm
 
 
 uris = [
-    # 'radio://0/80/2M/E7E7E7E7E0',  # seem to be fine
-    # 'radio://0/80/2M/E7E7E7E7E4',
+    'radio://0/80/2M/E7E7E7E7E4', # seem to be fine
     'radio://0/80/2M/E7E7E7E7E3',
     'radio://0/80/2M/E7E7E7E7E6',
-    # 'radio://0/80/2M/E7E7E7E7E5',  # maybe good drones
+    'radio://0/80/2M/E7E7E7E7E7',
+    # 'radio://0/80/2M/E7E7E7E7E5',  # maybe fine
     # 'radio://0/80/2M/E7E7E7E7E9',
     # 'radio://0/80/2M/E7E7E7E7E1',  # bad drones from here
     # 'radio://0/80/2M/E7E7E7E7E2',
+    # 'radio://0/80/2M/E7E7E7E7E0',
 ]
 
 initData = {
     'forceFalloff': 1.0,
     'targetForce': 0.3,
     'avoidRange': 0.9,
-    'avoidForce': 1.0,
+    'avoidForce': 0.8,
     'maxLength': 0.2,
 }
 
