@@ -271,14 +271,28 @@ void appMain()
         targetPosition.y = packetData.pos.y;
         targetPosition.z = 0.7f;
         isLanding = false;
-        state = simpleAvoid;
+        if (droneMode == 0)
+        {
+          state = simpleAvoid;
+        }
+        if (droneMode == 1)
+        {
+          state = flock;
+        }
         break;
       case 2:  // land
         targetPosition.x = packetData.pos.x;
         targetPosition.y = packetData.pos.y;
         targetPosition.z = -1.0f;
         isLanding = true;
-        state = simpleAvoid;
+        if (droneMode == 0)
+        {
+          state = simpleAvoid;
+        }
+        if (droneMode == 1)
+        {
+          state = flock;
+        }
         break;
       case 3:  // debug1
         state = debug1;
