@@ -12,7 +12,7 @@ from cflib.crazyflie.swarm import Swarm
 
 
 uris = [
-    'radio://0/80/2M/E7E7E7E7E4', # seem to be fine
+    'radio://0/80/2M/E7E7E7E7E4',  # seem to be fine
     'radio://0/80/2M/E7E7E7E7E3',
     'radio://0/80/2M/E7E7E7E7E6',
     'radio://0/80/2M/E7E7E7E7E7',
@@ -24,6 +24,7 @@ uris = [
 ]
 
 initData = {
+    'mode': 0,
     'forceFalloff': 1.0,
     'targetForce': 0.3,
     'avoidRange': 0.9,

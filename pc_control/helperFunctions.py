@@ -66,6 +66,8 @@ def init_drone(scf, amount, droneId, initData):
     time.sleep(0.2)
     set_param(scf, 'drone.id', droneId)
     time.sleep(0.2)
+    set_param(scf, 'drone.mode', initData['mode'])
+    time.sleep(0.2)
     set_param(scf, 'drone.forceFalloff', initData['forceFalloff'])
     time.sleep(0.2)
     set_param(scf, 'drone.targetForce', initData['targetForce'])

@@ -33,7 +33,8 @@ typedef enum
 {
   uninitialized,
   enginesOff,
-  active,
+  simpleAvoid,
+  flock,
   debug1,
   debug2,
   debug3,
@@ -61,7 +62,7 @@ static float avoidRange = 1.0;
 static float avoidForce = 1.5;
 static float maxLength = 1.0;
 
-
+#pragma region P2Pcomm
 static void communicate()
 {
   if (timer == 2 * packetData.id)
@@ -83,7 +84,9 @@ void p2pCallbackHandler(P2PPacket *p)
   otherVelocities[receivedPacketData.id] = receivedPacketData.vel;
   // consolePrintf("%d <- id=%d\n", packetData.id, receivedPacketData.id);
 }
+#pragma endregion P2Pcomm
 
+#pragma region Vectors
 static Vector3 getTargetVector()
 {
   Vector3 droneToTarget = sub(packetData.pos, targetPosition);
@@ -119,7 +122,9 @@ static Vector3 getAvoidVector(bool *isInAvoidRange)
   }
   return sum;
 }
+#pragma endregion Vectors
 
+#pragma region Setpoints_LED
 static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
 {
   sp->mode.x = modeAbs;
@@ -141,6 +146,19 @@ static void shutOffEngines(setpoint_t *sp)
   sp->mode.yaw = modeDisable;
 }
 
+static void ledIndicateDetection(bool isInRange)
+{
+  if (isInRange)
+  {
+    ledSetAll();
+  }
+  else
+  {
+    ledClearAll();
+  }
+}
+#pragma endregion Setpoints_LED
+
 // ENTRY POINT
 void appMain()
 {
@@ -153,6 +171,7 @@ void appMain()
   
   timer = 0;
 
+  #pragma region Param_Log
   // drone.cmd value meanings:
   // 1:   start
   // 2:   land
@@ -163,12 +182,17 @@ void appMain()
   // 100: used to trigger initialization
   // be careful not to use these values for something else
   static int8_t droneCmd = 0;
+  // drone.mode meaning:
+  // 0: simple potential field avoidance and target approach
+  // 1: boid flocking
+  static int8_t droneMode = 0;
 
   // parameters can be written from the pc and read by the drone
   PARAM_GROUP_START(drone)
   PARAM_ADD(PARAM_UINT8, amount, &droneAmount)
   PARAM_ADD(PARAM_UINT8, id, &packetData.id)
   PARAM_ADD(PARAM_INT8, cmd, &droneCmd)
+  PARAM_ADD(PARAM_INT8, mode, &droneCmd)
   PARAM_ADD(PARAM_FLOAT, targetX, &targetPosition.x)
   PARAM_ADD(PARAM_FLOAT, targetY, &targetPosition.y)
   PARAM_ADD(PARAM_FLOAT, targetZ, &targetPosition.z)
@@ -193,6 +217,7 @@ void appMain()
   PARAM_ADD(LOG_UINT8, chr, &dbgchr)
   PARAM_ADD(LOG_INT32, int, &dbgint)
   LOG_GROUP_STOP(dbg)
+  #pragma endregion Param_Log
 
   p2pRegisterCB(p2pCallbackHandler);
 
@@ -246,14 +271,14 @@ void appMain()
         targetPosition.y = packetData.pos.y;
         targetPosition.z = 0.7f;
         isLanding = false;
-        state = active;
+        state = simpleAvoid;
         break;
       case 2:  // land
         targetPosition.x = packetData.pos.x;
         targetPosition.y = packetData.pos.y;
         targetPosition.z = -1.0f;
         isLanding = true;
-        state = active;
+        state = simpleAvoid;
         break;
       case 3:  // debug1
         state = debug1;
@@ -282,7 +307,7 @@ void appMain()
 
     switch (state)
     {
-      case active:
+      case simpleAvoid:
         communicate();
         Vector3 moveVector = getTargetVector();
         moveVector = add(moveVector, getAvoidVector(&isInAvoidRange));
@@ -290,14 +315,24 @@ void appMain()
         moveVector = add(moveVector, packetData.pos);
         // consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)moveVector.x, (double)moveVector.y, (double)moveVector.z);
         setHoverSetpoint(&setpoint, moveVector.x, moveVector.y, moveVector.z);
-        if (isInAvoidRange)
+
+        ledIndicateDetection(isInAvoidRange);
+        if (isLanding && packetData.pos.z < 0.15f)
         {
-          ledSetAll();
+          state = enginesOff;
+          consolePrintf("Drone %d entered enginesOff state \n", packetData.id);
         }
-        else
-        {
-          ledClearAll();
-        }
+        break;
+      case flock:
+        communicate();
+        Vector3 moveVector = getTargetVector();
+        moveVector = add(moveVector, getAvoidVector(&isInAvoidRange));
+        moveVector = clamp(moveVector, maxLength);
+        moveVector = add(moveVector, packetData.pos);
+        // consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)moveVector.x, (double)moveVector.y, (double)moveVector.z);
+        setHoverSetpoint(&setpoint, moveVector.x, moveVector.y, moveVector.z);
+
+        ledIndicateDetection(isInAvoidRange);
         if (isLanding && packetData.pos.z < 0.15f)
         {
           state = enginesOff;
@@ -307,15 +342,8 @@ void appMain()
       case enginesOff:
         communicate();
         getAvoidVector(&isInAvoidRange);
-        if (isInAvoidRange)
-        {
-          ledSetAll();
-        }
-        else
-        {
-          ledClearAll();
-        }
         shutOffEngines(&setpoint);
+        ledIndicateDetection(isInAvoidRange);
         break;
       case debug1:
         communicate();
@@ -324,14 +352,7 @@ void appMain()
         {
           consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)avoidVector.x, (double)avoidVector.y, (double)avoidVector.z);
         }
-        if (isInAvoidRange)
-        {
-          ledSetAll();
-        }
-        else
-        {
-          ledClearAll();
-        }
+        ledIndicateDetection(isInAvoidRange);
         break;
       case debug2:
         consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)packetData.pos.x, (double)packetData.pos.y, (double)packetData.pos.z);
@@ -403,8 +424,8 @@ void appMain()
       //     targetPosition.x = packetData.pos.x;
       //     targetPosition.y = packetData.pos.y;
       //     targetPosition.z = packetData.pos.z;
-      //     consolePrintf("%d entered active state x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)targetPosition.x, (double)targetPosition.y, (double)targetPosition.z);
-      //     state = active;
+      //     consolePrintf("%d entered simpleAvoid state x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)targetPosition.x, (double)targetPosition.y, (double)targetPosition.z);
+      //     state = simpleAvoid;
       //   }
       //   break;
       // case landing:
