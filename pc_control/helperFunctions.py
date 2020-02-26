@@ -56,23 +56,6 @@ def init_swarm(swarm, initData):
     for uri in available_uris:
         amount = len(available_uris)
         droneId = int(uri[-1])
-
-        # prevIdIndex = available_drones.index(droneId)
-        # if prevIdIndex == 0:
-        #     prevIdIndex = len(available_drones) - 1
-        # else:
-        #     prevIdIndex -= 1
-        # prevId = available_drones[prevIdIndex]
-
-        # nextIdIndex = available_drones.index(droneId)
-        # if nextIdIndex == len(available_drones) - 1:
-        #     nextIdIndex = 0
-        # else:
-        #     nextIdIndex += 1
-        # nextId = available_drones[nextIdIndex]
-
-        # ctr = available_drones.index(droneId)
-
         args_dict[uri] = [amount, droneId, initData]
 
     swarm.parallel_safe(init_drone, args_dict=args_dict)
@@ -92,17 +75,8 @@ def init_drone(scf, amount, droneId, initData):
     set_param(scf, 'drone.avoidForce', initData['avoidForce'])
     time.sleep(0.2)
     set_param(scf, 'drone.maxLength', initData['maxLength'])
-    # time.sleep(0.2)
-    # .set_param(scf, 'drone.prevId', prevId)
-    # time.sleep(0.2)
-    # set_param(scf, 'drone.nextId', nextId)
-    # time.sleep(0.2)
-    # set_param(scf, 'drone.ctr', ctr)
     time.sleep(0.2)
     set_param(scf, 'drone.cmd', 100)
-    time.sleep(0.2)
-    get_param(scf, 'dbg.chr')
-    # print(f"Initialized drone nr {droneId}")
 
 
 ##### FORMATION SETTING #####
@@ -225,3 +199,24 @@ def wait_for_param_download(scf):
     while not scf.cf.param.is_updated:
         time.sleep(1.0)
     print('Parameters downloaded for', scf.cf.link_uri)
+
+
+
+
+
+### old code from init_swarm
+# prevIdIndex = available_drones.index(droneId)
+# if prevIdIndex == 0:
+#     prevIdIndex = len(available_drones) - 1
+# else:
+#     prevIdIndex -= 1
+# prevId = available_drones[prevIdIndex]
+
+# nextIdIndex = available_drones.index(droneId)
+# if nextIdIndex == len(available_drones) - 1:
+#     nextIdIndex = 0
+# else:
+#     nextIdIndex += 1
+# nextId = available_drones[nextIdIndex]
+
+# ctr = available_drones.index(droneId)

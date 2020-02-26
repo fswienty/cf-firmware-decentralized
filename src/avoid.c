@@ -192,6 +192,12 @@ void appMain()
 
   p2pRegisterCB(p2pCallbackHandler);
 
+  // put PacketData structs with out of bounds values into the otherPositions array
+  for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
+  {
+    otherPositions[i] = (Vector3){DUMMY_POSITION, DUMMY_POSITION, DUMMY_POSITION};
+  }
+
   while (1)
   {
     // vTaskDelay(M2T(10));
@@ -207,12 +213,6 @@ void appMain()
     {
       if (droneCmd == 100)
       {
-        // put PacketData structs with out of bounds values into the otherPositions array
-        for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
-        {
-          otherPositions[i] = (Vector3){DUMMY_POSITION, DUMMY_POSITION, DUMMY_POSITION};
-        }
-        dbgchr = packetData.id;
         state = enginesOff;
         droneCmd = 0;
       }
