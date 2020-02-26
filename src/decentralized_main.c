@@ -43,13 +43,15 @@ typedef struct _PacketData
 {
   int id;
   Vector3 pos;
-} PacketData;  // size: ? + 12 bytes
+  Vector3 vel;
+} PacketData;  // size: ? bytes + 12 bytes + 12 bytes  // max: 60 bytes
 
 
 static PacketData packetData;  // the data that is send around via the p2p broadcast method
 static Vector3 targetPosition;  // this drones's target position
+static Vector3 lastPosition;  // this drones position in the last execution cycle, used to estimate velocity
 static Vector3 otherPositions[OTHER_DRONES_ARRAY_SIZE];  // array of the positions of the other drones
-// static uint8_t lastReceivedDroneId;  // id of the last received packetData
+static Vector3 otherVelocities[OTHER_DRONES_ARRAY_SIZE];  // array of the velocities of the other drones
 static uint8_t droneAmount;  // amount of drones. SET DURING INITIALIZATION, DON'T CHANGE AT RUNTIME.
 static uint8_t timer;
 // variables for the avoidance algorithm, values are set from the pc. default values exist just in case something goes wrong.
@@ -78,6 +80,7 @@ void p2pCallbackHandler(P2PPacket *p)
   PacketData receivedPacketData;
   memcpy(&receivedPacketData, p->data, sizeof(PacketData));
   otherPositions[receivedPacketData.id] = receivedPacketData.pos;
+  otherVelocities[receivedPacketData.id] = receivedPacketData.vel;
   // consolePrintf("%d <- id=%d\n", packetData.id, receivedPacketData.id);
 }
 
@@ -142,6 +145,7 @@ static void shutOffEngines(setpoint_t *sp)
 void appMain()
 {
   static point_t kalmanPosition;
+  static point_t kalmanVelocity;
   static setpoint_t setpoint;
   static State state = uninitialized;
   bool isInAvoidRange = false;  // true if the drone is close within avoidRange of another one
@@ -219,11 +223,19 @@ void appMain()
       continue;
     }
 
-    // put kalman position in this drone's packetData struct
     estimatorKalmanGetEstimatedPos(&kalmanPosition);
+    // put kalman position in this drone's packetData struct
     packetData.pos.x = kalmanPosition.x;
     packetData.pos.y = kalmanPosition.y;
     packetData.pos.z = kalmanPosition.z;
+    // estimate velocity and put it in this drone's packetData struct
+    packetData.vel.x = kalmanPosition.x - lastPosition.x;
+    packetData.vel.y = kalmanPosition.y - lastPosition.y;
+    packetData.vel.z = kalmanPosition.z - lastPosition.z;
+    // update lastPosition for the next execution cycle
+    lastPosition.x = kalmanPosition.x;
+    lastPosition.y = kalmanPosition.y;
+    lastPosition.z = kalmanPosition.z;
 
     switch (droneCmd)
     {

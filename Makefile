@@ -3,7 +3,7 @@ APP=1
 APP_STACKSIZE=300
 
 VPATH += src/
-PROJ_OBJ += avoid.o
+PROJ_OBJ += decentralized_main.o
 PROJ_OBJ += vector3.o
 
 CRAZYFLIE_BASE=crazyflie-firmware
