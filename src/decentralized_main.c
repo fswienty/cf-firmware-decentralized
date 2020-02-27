@@ -19,6 +19,7 @@
 #include "radiolink.h"
 #include "led.h"
 #include "vector3.h"
+// #include "simple_avoid.h"
 #include "console.h"
 
 #define MAX(a, b) ((a > b) ? a : b)
@@ -61,6 +62,7 @@ static float targetForce = 0.3;
 static float avoidRange = 1.0;
 static float avoidForce = 1.5;
 static float maxLength = 1.0;
+static float accBudget = 1.0;
 
 #pragma region P2Pcomm
 static void communicate()
@@ -86,7 +88,32 @@ void p2pCallbackHandler(P2PPacket *p)
 }
 #pragma endregion P2Pcomm
 
-#pragma region Vectors
+#pragma region Flocking
+static Vector3 getFlockVector(bool *isInAvoidRange)
+{  
+  // separation
+
+  // obstacle avoidance
+
+  // alignment
+
+  // cohesion
+
+  // target seeking
+  
+  isInAvoidRange = false;
+  return (Vector3){0, 0, 0};
+}
+#pragma endregion Flocking
+
+#pragma region SimpleAvoid
+static Vector3 getSimpleAvoidVector(bool *isInAvoidRange)
+{
+  Vector3 vector = getTargetVector();
+  vector = add(vector, getAvoidVector(isInAvoidRange));  // check if this works
+  return clamp(vector, maxLength);
+}
+
 static Vector3 getTargetVector()
 {
   Vector3 droneToTarget = sub(packetData.pos, targetPosition);
@@ -122,7 +149,7 @@ static Vector3 getAvoidVector(bool *isInAvoidRange)
   }
   return sum;
 }
-#pragma endregion Vectors
+#pragma endregion SimpleAvoid
 
 #pragma region Setpoints_LED
 static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
@@ -201,6 +228,7 @@ void appMain()
   PARAM_ADD(PARAM_FLOAT, avoidRange, &avoidRange)
   PARAM_ADD(PARAM_FLOAT, avoidForce, &avoidForce)
   PARAM_ADD(PARAM_FLOAT, maxLength, &maxLength)
+  PARAM_ADD(PARAM_FLOAT, accBudget, &accBudget)
   PARAM_GROUP_STOP(drone)
 
   // debug variables which can be written and read from the pc and the drone
@@ -323,10 +351,11 @@ void appMain()
     {
       case simpleAvoid:
         communicate();
-        Vector3 moveVector = getTargetVector();
-        moveVector = add(moveVector, getAvoidVector(&isInAvoidRange));
-        moveVector = clamp(moveVector, maxLength);
-        moveVector = add(moveVector, packetData.pos);
+        // Vector3 moveVector = getTargetVector();
+        // moveVector = add(moveVector, getAvoidVector(&isInAvoidRange));
+        // moveVector = clamp(moveVector, maxLength);
+        // moveVector = add(moveVector, packetData.pos);
+        Vector3 moveVector = add(packetData.pos, getSimpleAvoidVector(&isInAvoidRange));
         // consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)moveVector.x, (double)moveVector.y, (double)moveVector.z);
         setHoverSetpoint(&setpoint, moveVector.x, moveVector.y, moveVector.z);
 
@@ -339,11 +368,7 @@ void appMain()
         break;
       case flock:
         communicate();
-        Vector3 moveVector = getTargetVector();
-        moveVector = add(moveVector, getAvoidVector(&isInAvoidRange));
-        moveVector = clamp(moveVector, maxLength);
-        moveVector = add(moveVector, packetData.pos);
-        // consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)moveVector.x, (double)moveVector.y, (double)moveVector.z);
+        Vector3 moveVector = add(packetData.pos, getFlockVector(&isInAvoidRange));
         setHoverSetpoint(&setpoint, moveVector.x, moveVector.y, moveVector.z);
 
         ledIndicateDetection(isInAvoidRange);

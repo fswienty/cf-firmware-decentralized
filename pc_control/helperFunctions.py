@@ -78,6 +78,9 @@ def init_drone(scf, amount, droneId, initData):
     time.sleep(0.2)
     set_param(scf, 'drone.maxLength', initData['maxLength'])
     time.sleep(0.2)
+    set_param(scf, 'drone.accBudget', initData['accBudget'])
+
+    time.sleep(0.2)
     set_param(scf, 'drone.cmd', 100)
 
 
@@ -87,7 +90,6 @@ def set_formation(swarm, formation_name):
     path = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(path, "formations")
     path = os.path.join(path, f"{formation_name}.csv")
-    # print(path)
     try:
         formation = np.loadtxt(path, delimiter=",")
     except:
@@ -108,7 +110,6 @@ def set_formation(swarm, formation_name):
     args_dict = {}
     for i in range(0, max_iterator):
         args_dict[available_uris[i]] = [formation[i][0], formation[i][1], formation[i][2]]
-    # print(args_dict)
 
     # set formation
     print(f"Setting formation {formation_name}")

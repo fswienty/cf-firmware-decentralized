@@ -30,6 +30,7 @@ initData = {
     'avoidRange': 0.9,
     'avoidForce': 0.8,
     'maxLength': 0.2,
+    'accBudget': 1.0,
 }
 
 
@@ -86,10 +87,9 @@ if __name__ == '__main__':
                 print("Arguments missing")
                 continue
 
-            # the args_dict contains all remaining arguments, keyed with the appropriate uri(s)
-            # args is a list with all remaining arguments
+            # creates the args_dict containing all remaining arguments, keyed with the appropriate uri(s)
             args_dict = {}
-            args = inp[2:]
+            args = inp[2:]  # list with all remaining arguments
             if crazyflie == "all":
                 for uri in swarm._cfs.keys():
                     args_dict[uri] = args
@@ -122,9 +122,9 @@ if __name__ == '__main__':
 
             # execution of commands
             try:
-                if crazyflie == "all":
+                if crazyflie == "all":  # execute the command for all crazyflies
                     swarm.parallel_safe(function, args_dict=args_dict)
-                else:
+                else:  # execute the command for a single crazyfly
                     function(crazyflie, *args)
             except:
                 print("Exeption occured")
