@@ -31,6 +31,15 @@ initData = {
     'avoidForce': 0.8,
     'maxLength': 0.2,
     'accBudget': 1.0,
+    'zMiddle': 1.0,
+    'xMax': 1.5,
+    'yMax': 1.0,
+    'zMax': 0.7,
+    'wWallAvoid': 1.0,
+    'wSeparation': 1.0,
+    'wAlignment': 1.0,
+    'wCohesion': 1.0,
+    'wTargetSeek': 1.0,
 }
 
 

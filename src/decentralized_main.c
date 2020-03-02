@@ -63,6 +63,15 @@ static float avoidRange = 1.0;
 static float avoidForce = 1.5;
 static float maxLength = 1.0;
 static float accBudget = 1.0;
+static float zMiddle = 1.0;
+static float xMax = 1.5;
+static float yMax = 1.0;
+static float zMax = 0.7;
+static float wWallAvoid = 1.0;
+static float wSeparation = 1.0;
+static float wAlignment = 1.0;
+static float wCohesion = 1.0;
+static float wTargetSeek = 1.0;
 
 #pragma region P2Pcomm
 static void communicate()
@@ -91,9 +100,12 @@ void p2pCallbackHandler(P2PPacket *p)
 #pragma region Flocking
 static Vector3 getFlockVector(bool *isInAvoidRange)
 {  
-  // separation
+  float remainingAcc = accBudget;
+  // wall avoidance
+  float outsidendness = 0;
 
-  // obstacle avoidance
+
+  // separation
 
   // alignment
 
@@ -229,6 +241,14 @@ void appMain()
   PARAM_ADD(PARAM_FLOAT, avoidForce, &avoidForce)
   PARAM_ADD(PARAM_FLOAT, maxLength, &maxLength)
   PARAM_ADD(PARAM_FLOAT, accBudget, &accBudget)
+  PARAM_ADD(PARAM_FLOAT, zMiddle, &zMiddle)
+  PARAM_ADD(PARAM_FLOAT, xMax, &xMax)
+  PARAM_ADD(PARAM_FLOAT, yMax, &yMax)
+  PARAM_ADD(PARAM_FLOAT, zMax, &zMax)
+  PARAM_ADD(PARAM_FLOAT, wWallAvoid, &wWallAvoid)
+  PARAM_ADD(PARAM_FLOAT, wSeparation, &wSeparation)
+  PARAM_ADD(PARAM_FLOAT, wAlignment, &wAlignment)
+  PARAM_ADD(PARAM_FLOAT, wTargetSeek, &wTargetSeek)
   PARAM_GROUP_STOP(drone)
 
   // debug variables which can be written and read from the pc and the drone
