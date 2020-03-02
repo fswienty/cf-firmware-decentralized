@@ -101,17 +101,25 @@ void p2pCallbackHandler(P2PPacket *p)
 static Vector3 getFlockVector(bool *isInAvoidRange)
 {  
   float remainingAcc = accBudget;
-  // wall avoidance
-  float outsidendness = 0;
+  // WALL AVOIDANCE
+  // calculate how far the drone is outside the bounds
+  float outsidedness = 0;
+  if (packetData.pos.x > xMax) outsidedness += abs(packetData.pos.x - xMax);
+  if (packetData.pos.x < -xMax) outsidedness += abs(packetData.pos.x + xMax);
+  if (packetData.pos.y > yMax) outsidedness += abs(packetData.pos.y - yMax);
+  if (packetData.pos.y < -yMax) outsidedness += abs(packetData.pos.y + yMax);
+  if (packetData.pos.z > (zMiddle + zMax)) outsidedness += abs(packetData.pos.z - (zMiddle + zMax));
+  if (packetData.pos.z < (zMiddle - zMax)) outsidedness += abs(packetData.pos.z - (zMiddle - zMax));
+  
 
 
-  // separation
+  // SEPARATION
 
-  // alignment
+  // ALIGNMENT
 
-  // cohesion
+  // COHESION
 
-  // target seeking
+  // TARGET SEEKING
   
   isInAvoidRange = false;
   return (Vector3){0, 0, 0};
