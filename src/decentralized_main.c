@@ -99,7 +99,8 @@ void p2pCallbackHandler(P2PPacket *p)
 
 #pragma region Flocking
 static Vector3 getFlockVector(bool *isInAvoidRange)
-{  
+{ 
+  Vector3 flockVector = (Vector3){0, 0, 0};
   float remainingAcc = accBudget;
   // WALL AVOIDANCE
   // calculate how far the drone is outside the bounds
@@ -111,6 +112,13 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
   if (packetData.pos.z > (zMiddle + zMax)) outsidedness += abs(packetData.pos.z - (zMiddle + zMax));
   if (packetData.pos.z < (zMiddle - zMax)) outsidedness += abs(packetData.pos.z - (zMiddle - zMax));
   
+  if (outsidedness > 0)
+  {
+    Vector3 centerVec = norm(sub(packetData.pos, (Vector3){0, 0, zMiddle}));
+    centerVec = mul(centerVec, wWallAvoid * outsidedness);
+    flockVector = add(flockVector, centerVec);
+    remainingAcc -= magnitude(centerVec);
+  }
 
 
   // SEPARATION
