@@ -119,8 +119,7 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
     wallAvoidVector = norm(wallAvoidVector);
     wallAvoidVector = mul(wallAvoidVector, outsidedness);
   }
-  wallAvoidVector = mul(wallAvoidVector, wWallAvoid);
-  addToFlockVector(&flockVector, wallAvoidVector, &remainingAcc);
+  addToFlockVector(&flockVector, &remainingAcc, wallAvoidVector, wWallAvoid);
 
   // SEPARATION
   Vector3 separationVector = (Vector3){0, 0, 0};
@@ -138,8 +137,7 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
       separationVector = add(separationVector, otherToDrone);
     }
   }
-  separationVector = mul(separationVector, wSeparation);
-  addToFlockVector(&flockVector, separationVector, &remainingAcc);
+  addToFlockVector(&flockVector, &remainingAcc, separationVector, wSeparation);
 
   // ALIGNMENT
   Vector3 alignmentVector = packetData.vel;
@@ -155,8 +153,7 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
     }
   }
   alignmentVector = mul(alignmentVector, 1 / dronesInAlignRange);
-  alignmentVector = mul(alignmentVector, wAlignment);
-  addToFlockVector(&flockVector, alignmentVector, &remainingAcc);
+  addToFlockVector(&flockVector, &remainingAcc, alignmentVector, wAlignment);
 
   // COHESION
   Vector3 cohesionVector = (Vector3){0, 0, 0};
@@ -175,8 +172,7 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
   {
     cohesionVector = mul(cohesionVector, 1 / dronesInCohesionRange);
   }
-  cohesionVector = mul(cohesionVector, wCohesion);
-  addToFlockVector(&flockVector, cohesionVector, &remainingAcc);
+  addToFlockVector(&flockVector, &remainingAcc, cohesionVector, wCohesion);
 
   // TARGET SEEKING
   Vector3 targetVector = sub(packetData.pos, targetPosition);
@@ -188,26 +184,26 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
   {
     targetVector = mul(targetVector, 1 / forceFalloff);
   }
-  targetVector = mul(targetVector, wTargetSeek);
-  addToFlockVector(&flockVector, targetVector, &remainingAcc);
+  addToFlockVector(&flockVector, &remainingAcc, targetVector, wTargetSeek);
 
   return flockVector;
 }
 
-void addToFlockVector(Vector3 *flockVector, Vector3 vector, float *remainingAcc)
+void addToFlockVector(Vector3 *flockVector, float *remainingAcc, Vector3 vector, float weight)
 {
+  Vector3 vec = mul(vector, weight);
   if (*remainingAcc < 0)
   {
     return;
   }
-  float length = magnitude(vector);
+  float length = magnitude(vec);
   if (*remainingAcc > length)
   {
-    *flockVector = add(*flockVector, vector);
+    *flockVector = add(*flockVector, vec);
   }
   else
   {
-    *flockVector = add(*flockVector, clamp(vector, *remainingAcc));
+    *flockVector = add(*flockVector, clamp(vec, *remainingAcc));
   }
   *remainingAcc -= length;
 }
