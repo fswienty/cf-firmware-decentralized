@@ -26,7 +26,7 @@
 #define MIN(a, b) ((a < b) ? a : b)
 
 #define OTHER_DRONES_ARRAY_SIZE 10  // size of the array containing the positions of other drones. must be at least as high as the highest id among all drones plus one.
-#define DUMMY_POSITION 99999  // the xyz coordinates of non-connected drones will be set to this value
+#define DUMMY_VALUE 99999  // the xyz coordinates and velocities of non-connected drones will be set to this value
 
 //#define DEBUG_MODULE "PUSH
 
@@ -104,7 +104,7 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
   float remainingAcc = accBudget;
 
   // WALL AVOIDANCE
-  // calculate how far the drone is outside the bounds
+  Vector3 wallAvoidVector = (Vector3){0, 0, 0};
   float outsidedness = 0;
   if (packetData.pos.x > xMax) outsidedness += abs(packetData.pos.x - xMax);
   if (packetData.pos.x < -xMax) outsidedness += abs(packetData.pos.x + xMax);
@@ -115,21 +115,82 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
   
   if (outsidedness > 0)
   {
-    Vector3 centerVector = norm(sub(packetData.pos, (Vector3){0, 0, zMiddle}));
-    centerVector = mul(centerVector, wWallAvoid * outsidedness);
-    addToFlockVector(&flockVector, centerVector, &remainingAcc);
+    wallAvoidVector = sub(packetData.pos, (Vector3){0, 0, zMiddle});
+    wallAvoidVector = norm(wallAvoidVector);
+    wallAvoidVector = mul(wallAvoidVector, outsidedness);
   }
-
+  wallAvoidVector = mul(wallAvoidVector, wWallAvoid);
+  addToFlockVector(&flockVector, wallAvoidVector, &remainingAcc);
 
   // SEPARATION
+  Vector3 separationVector = (Vector3){0, 0, 0};
+  *isInAvoidRange = false;
+  for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
+  {
+    Vector3 otherToDrone = sub(otherPositions[i], packetData.pos);
+    float distance = magnitude(otherToDrone);
+    if(distance < avoidRange)
+    {
+      *isInAvoidRange = true;
+      otherToDrone = norm(otherToDrone);
+      otherToDrone = mul(otherToDrone, 1 - (distance / avoidRange));
+      // otherToDrone = mul(otherToDrone, avoidForce);
+      separationVector = add(separationVector, otherToDrone);
+    }
+  }
+  separationVector = mul(separationVector, wSeparation);
+  addToFlockVector(&flockVector, separationVector, &remainingAcc);
 
   // ALIGNMENT
+  Vector3 alignmentVector = packetData.vel;
+  int dronesInAlignRange = 1;
+  for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
+  {
+    Vector3 otherToDrone = sub(otherPositions[i], packetData.pos);
+    float distance = magnitude(otherToDrone);
+    if(distance < avoidRange)
+    {
+      dronesInAlignRange += 1;
+      alignmentVector = add(alignmentVector, otherVelocities[i]);
+    }
+  }
+  alignmentVector = mul(alignmentVector, 1 / dronesInAlignRange);
+  alignmentVector = mul(alignmentVector, wAlignment);
+  addToFlockVector(&flockVector, alignmentVector, &remainingAcc);
 
   // COHESION
+  Vector3 cohesionVector = (Vector3){0, 0, 0};
+  int dronesInCohesionRange = 0;
+  for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
+  {
+    Vector3 otherToDrone = sub(otherPositions[i], packetData.pos);
+    float distance = magnitude(otherToDrone);
+    if(distance < avoidRange)
+    {
+      dronesInCohesionRange += 1;
+      cohesionVector = add(cohesionVector, otherPositions[i]);
+    }
+  }
+  if (dronesInCohesionRange > 0)
+  {
+    cohesionVector = mul(cohesionVector, 1 / dronesInCohesionRange);
+  }
+  cohesionVector = mul(cohesionVector, wCohesion);
+  addToFlockVector(&flockVector, cohesionVector, &remainingAcc);
 
   // TARGET SEEKING
-  
-  isInAvoidRange = false;
+  Vector3 targetVector = sub(packetData.pos, targetPosition);
+  if(magnitude(targetVector) > forceFalloff)
+  {
+    targetVector = norm(targetVector);
+  }
+  else
+  {
+    targetVector = mul(targetVector, 1 / forceFalloff);
+  }
+  targetVector = mul(targetVector, wTargetSeek);
+  addToFlockVector(&flockVector, targetVector, &remainingAcc);
+
   return flockVector;
 }
 
@@ -178,7 +239,7 @@ static Vector3 getTargetVector()
 static Vector3 getAvoidVector(bool *isInAvoidRange)
 {
   *isInAvoidRange = false;
-  // other drones stuff (maybe quit early if otherPositions[i].x == DUMMY_POSITION?)
+  // other drones stuff (maybe quit early if otherPositions[i].x == DUMMY_VALUE?)
   Vector3 sum = (Vector3){0, 0, 0};
   for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
   {
@@ -306,7 +367,8 @@ void appMain()
   // put PacketData structs with out of bounds values into the otherPositions array
   for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
   {
-    otherPositions[i] = (Vector3){DUMMY_POSITION, DUMMY_POSITION, DUMMY_POSITION};
+    otherPositions[i] = (Vector3){DUMMY_VALUE, DUMMY_VALUE, DUMMY_VALUE};
+    otherVelocities[i] = (Vector3){DUMMY_VALUE, DUMMY_VALUE, DUMMY_VALUE};
   }
 
   while (1)
@@ -486,7 +548,7 @@ void appMain()
 //   }
 //   droneToTarget = mul(droneToTarget, targetForce);
 //   sum = add(sum, droneToTarget);
-//   // other drones stuff (maybe quit early if otherPositions[i].x == DUMMY_POSITION?)
+//   // other drones stuff (maybe quit early if otherPositions[i].x == DUMMY_VALUE?)
 //   for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
 //   {
 //     Vector3 otherToDrone = sub(otherPositions[i], dronePosition);
