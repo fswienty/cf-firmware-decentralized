@@ -37,8 +37,11 @@ initData = {
     'zMax': 0.7,
     'wWallAvoid': 1.0,
     'wSeparation': 1.0,
+    'sepRange': 0.8,
     'wAlignment': 1.0,
+    'alignRange': 1.0,
     'wCohesion': 1.0,
+    'cohesRange': 1.0,
     'wTargetSeek': 1.0,
 }
 

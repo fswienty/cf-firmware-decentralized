@@ -69,8 +69,11 @@ static float yMax = 1.0;
 static float zMax = 0.7;
 static float wWallAvoid = 1.0;
 static float wSeparation = 1.0;
+static float sepRange = 1.0;
 static float wAlignment = 1.0;
+static float alignRange = 1.0;
 static float wCohesion = 1.0;
+static float cohesRange = 1.0;
 static float wTargetSeek = 1.0;
 
 #pragma region P2Pcomm
@@ -128,11 +131,11 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
   {
     Vector3 otherToDrone = sub(otherPositions[i], packetData.pos);
     float distance = magnitude(otherToDrone);
-    if(distance < avoidRange)
+    if(distance < sepRange)
     {
       *isInAvoidRange = true;
       otherToDrone = norm(otherToDrone);
-      otherToDrone = mul(otherToDrone, 1 - (distance / avoidRange));
+      otherToDrone = mul(otherToDrone, 1 - (distance / sepRange));
       // otherToDrone = mul(otherToDrone, avoidForce);
       separationVector = add(separationVector, otherToDrone);
     }
@@ -146,7 +149,7 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
   {
     Vector3 otherToDrone = sub(otherPositions[i], packetData.pos);
     float distance = magnitude(otherToDrone);
-    if(distance < avoidRange)
+    if(distance < alignRange)
     {
       dronesInAlignRange += 1;
       alignmentVector = add(alignmentVector, otherVelocities[i]);
@@ -162,7 +165,7 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
   {
     Vector3 otherToDrone = sub(otherPositions[i], packetData.pos);
     float distance = magnitude(otherToDrone);
-    if(distance < avoidRange)
+    if(distance < cohesRange)
     {
       dronesInCohesionRange += 1;
       cohesionVector = add(cohesionVector, otherPositions[i]);
@@ -191,11 +194,11 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
 
 void addToFlockVector(Vector3 *flockVector, float *remainingAcc, Vector3 vector, float weight)
 {
-  Vector3 vec = mul(vector, weight);
   if (*remainingAcc < 0)
   {
     return;
   }
+  Vector3 vec = mul(vector, weight);
   float length = magnitude(vec);
   if (*remainingAcc > length)
   {
@@ -338,7 +341,11 @@ void appMain()
   PARAM_ADD(PARAM_FLOAT, zMax, &zMax)
   PARAM_ADD(PARAM_FLOAT, wWallAvoid, &wWallAvoid)
   PARAM_ADD(PARAM_FLOAT, wSeparation, &wSeparation)
+  PARAM_ADD(PARAM_FLOAT, sepRange, &sepRange)
   PARAM_ADD(PARAM_FLOAT, wAlignment, &wAlignment)
+  PARAM_ADD(PARAM_FLOAT, alignRange, &alignRange)
+  PARAM_ADD(PARAM_FLOAT, wCohesion, &wCohesion)
+  PARAM_ADD(PARAM_FLOAT, cohesRange, &cohesRange)
   PARAM_ADD(PARAM_FLOAT, wTargetSeek, &wTargetSeek)
   PARAM_GROUP_STOP(drone)
 
