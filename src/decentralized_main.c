@@ -56,12 +56,13 @@ static Vector3 otherPositions[OTHER_DRONES_ARRAY_SIZE];  // array of the positio
 static Vector3 otherVelocities[OTHER_DRONES_ARRAY_SIZE];  // array of the velocities of the other drones
 static uint8_t droneAmount;  // amount of drones. SET DURING INITIALIZATION, DON'T CHANGE AT RUNTIME.
 static uint8_t timer;
-// variables for the avoidance algorithm, values are set from the pc. default values exist just in case something goes wrong.
+// variables for the basic avoidance algorithm, values are set from the pc. default values exist just in case something goes wrong.
 static float forceFalloff = 1.5;
 static float targetForce = 0.3;
 static float avoidRange = 1.0;
 static float avoidForce = 1.5;
 static float maxLength = 1.0;
+// variables for the boid flocking algorithm
 static float accBudget = 1.0;
 static float zMiddle = 1.0;
 static float xMax = 1.5;
@@ -156,6 +157,7 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
     }
   }
   alignmentVector = mul(alignmentVector, 1 / dronesInAlignRange);
+  alignmentVector = clamp(alignmentVector, 0.2f);  // maybe make this configurable
   addToFlockVector(&flockVector, &remainingAcc, alignmentVector, wAlignment);
 
   // COHESION
@@ -174,6 +176,7 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
   if (dronesInCohesionRange > 0)
   {
     cohesionVector = mul(cohesionVector, 1 / dronesInCohesionRange);
+    cohesionVector = clamp(cohesionVector, 0.2f);  // maybe make this configurable
   }
   addToFlockVector(&flockVector, &remainingAcc, cohesionVector, wCohesion);
 
