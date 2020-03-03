@@ -102,6 +102,7 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
 { 
   Vector3 flockVector = (Vector3){0, 0, 0};
   float remainingAcc = accBudget;
+
   // WALL AVOIDANCE
   // calculate how far the drone is outside the bounds
   float outsidedness = 0;
@@ -114,10 +115,9 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
   
   if (outsidedness > 0)
   {
-    Vector3 centerVec = norm(sub(packetData.pos, (Vector3){0, 0, zMiddle}));
-    centerVec = mul(centerVec, wWallAvoid * outsidedness);
-    flockVector = add(flockVector, centerVec);
-    remainingAcc -= magnitude(centerVec);
+    Vector3 centerVector = norm(sub(packetData.pos, (Vector3){0, 0, zMiddle}));
+    centerVector = mul(centerVector, wWallAvoid * outsidedness);
+    addToFlockVector(&flockVector, centerVector, &remainingAcc);
   }
 
 
@@ -130,7 +130,25 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
   // TARGET SEEKING
   
   isInAvoidRange = false;
-  return (Vector3){0, 0, 0};
+  return flockVector;
+}
+
+void addToFlockVector(Vector3 *flockVector, Vector3 vector, float *remainingAcc)
+{
+  if (*remainingAcc < 0)
+  {
+    return;
+  }
+  float length = magnitude(vector);
+  if (*remainingAcc > length)
+  {
+    *flockVector = add(*flockVector, vector);
+  }
+  else
+  {
+    *flockVector = add(*flockVector, clamp(vector, *remainingAcc));
+  }
+  *remainingAcc -= length;
 }
 #pragma endregion Flocking
 
