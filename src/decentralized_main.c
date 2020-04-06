@@ -19,16 +19,10 @@
 #include "radiolink.h"
 #include "led.h"
 #include "vector3.h"
-// #include "simple_avoid.h"
 #include "console.h"
-
-#define MAX(a, b) ((a > b) ? a : b)
-#define MIN(a, b) ((a < b) ? a : b)
 
 #define OTHER_DRONES_ARRAY_SIZE 10  // size of the array containing the positions of other drones. must be at least as high as the highest id among all drones plus one.
 #define DUMMY_VALUE 99999  // the xyz coordinates and velocities of non-connected drones will be set to this value
-
-//#define DEBUG_MODULE "PUSH
 
 typedef enum
 {
@@ -80,7 +74,7 @@ static float wTargetSeek = 1.0;
 #pragma region P2Pcomm
 static void communicate()
 {
-  if (timer == 2 * packetData.id)
+  if (timer == packetData.id)
   {
     // consolePrintf("%d comm \n", packetData.id);
     P2PPacket packet;
@@ -377,12 +371,13 @@ void appMain()
     otherVelocities[i] = (Vector3){DUMMY_VALUE, DUMMY_VALUE, DUMMY_VALUE};
   }
 
+  // MAIN LOOP
   while (1)
   {
     // vTaskDelay(M2T(10));
     vTaskDelay(M2T(10));
     timer += 1;
-    if(timer == 2 * 10)
+    if(timer == 10)
     {
       timer = 0;
     }
@@ -412,6 +407,7 @@ void appMain()
     lastPosition.y = kalmanPosition.y;
     lastPosition.z = kalmanPosition.z;
 
+    // read droneCmd set from the ground station to handle commands
     switch (droneCmd)
     {
       case 0:
@@ -469,6 +465,8 @@ void appMain()
     }
     droneCmd = 0;
 
+    // state machine for the quadcopter, executes the appropriate code depending on the current state
+    // states might be changed by the ground station (see above) or from another state when some conditions are met
     switch (state)
     {
       case simpleAvoid:
@@ -527,87 +525,3 @@ void appMain()
     commanderSetSetpoint(&setpoint, 3);
   }
 }
-
-
-// SOME OLD STUFF
-
-// ledClearAll();
-// ledSetAll();
-// ledSet(LED_BLUE_L, true);
-
-//int size = sizeof(array) / sizeof(array[0]);
-
-// static void approachTargetAvoidOthers(setpoint_t *sp, bool *isInAvoidRange)
-// {
-//   Vector3 dronePosition = packetData.pos;
-//   Vector3 sum = (Vector3){0, 0, 0};
-//   *isInAvoidRange = false;
-//   // target stuff
-//   Vector3 droneToTarget = sub(dronePosition, targetPosition);
-//   if(magnitude(droneToTarget) > forceFalloff)
-//   {
-//     droneToTarget = norm(droneToTarget);
-//   }
-//   else
-//   {
-//     droneToTarget = mul(droneToTarget, 1 / forceFalloff);
-//   }
-//   droneToTarget = mul(droneToTarget, targetForce);
-//   sum = add(sum, droneToTarget);
-//   // other drones stuff (maybe quit early if otherPositions[i].x == DUMMY_VALUE?)
-//   for (int i = 0; i < OTHER_DRONES_ARRAY_SIZE; i++)
-//   {
-//     Vector3 otherToDrone = sub(otherPositions[i], dronePosition);
-//     float distance = magnitude(otherToDrone);
-//     if(distance < avoidRange)
-//     {
-//       *isInAvoidRange = true;
-//       otherToDrone = norm(otherToDrone);
-//       otherToDrone = mul(otherToDrone, 1 - (distance / avoidRange));
-//       otherToDrone = mul(otherToDrone, avoidForce);
-//       sum = add(sum, otherToDrone);
-//     }
-//   }
-//   // add sum of forces to drone position and apply as setpoint
-//   if (packetData.id == 4)
-//   {
-//     consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)sum.x, (double)sum.y, (double)sum.z);
-//   }
-//   sum = add(dronePosition, sum);
-//   setHoverSetpoint(sp, sum.x, sum.y, sum.z);
-// }
-
-
-      // case starting:
-      //   moveVertical(&setpoint, 0.4);
-      //   if (packetData.pos.z > 0.7f)
-      //   {
-      //     targetPosition.x = packetData.pos.x;
-      //     targetPosition.y = packetData.pos.y;
-      //     targetPosition.z = packetData.pos.z;
-      //     consolePrintf("%d entered simpleAvoid state x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)targetPosition.x, (double)targetPosition.y, (double)targetPosition.z);
-      //     state = simpleAvoid;
-      //   }
-      //   break;
-      // case landing:
-      //   moveVertical(&setpoint, -0.4);
-      //   if (packetData.pos.z < 0.05f)
-      //   {
-      //     state = enginesOff;
-      //     consolePrintf("Drone %d entered enginesOff state \n", packetData.id);
-      //   }
-      //   break;
-
-      
-// static void moveVertical(setpoint_t *sp, float zVelocity)
-// {
-//   sp->mode.x = modeVelocity;
-//   sp->mode.y = modeVelocity;
-//   sp->mode.z = modeVelocity;
-//   sp->mode.yaw = modeAbs;
-
-//   sp->velocity.x = 0.0;
-//   sp->velocity.y = 0.0;
-//   sp->velocity.z = zVelocity;
-//   sp->attitudeRate.yaw = 0.0;
-// }
