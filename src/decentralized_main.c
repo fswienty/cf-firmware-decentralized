@@ -58,10 +58,13 @@ static float avoidForce = 1.5;
 static float maxLength = 1.0;
 // variables for the boid flocking algorithm
 static float accBudget = 1.0;
+
+static float wallMargin = 0.5;
+static float xMax = 2 - wallMargin;
+static float yMax = 1.5 - wallMargin;
+static float zMax = 1.2 - wallMargin;
 static float zMiddle = 1.0;
-static float xMax = 1.5;
-static float yMax = 1.0;
-static float zMax = 0.7;
+
 static float wWallAvoid = 1.0;
 static float wSeparation = 1.0;
 static float sepRange = 1.0;
