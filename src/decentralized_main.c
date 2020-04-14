@@ -189,7 +189,7 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
   }
   addToFlockVector(&flockVector, &remainingAcc, targetVector, wTargetSeek);
 
-  return clamp(flockVector, maxLength);
+  return flockVector;
 }
 
 void addToFlockVector(Vector3 *flockVector, float *remainingAcc, Vector3 vector, float weight)

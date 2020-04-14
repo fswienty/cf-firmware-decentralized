@@ -29,7 +29,7 @@ initData = {
     'targetForce': 0.3,
     'avoidRange': 0.9,
     'avoidForce': 0.8,
-    'maxLength': 0.05,
+    'maxLength': 0.2,
     'accBudget': 0.3,
     'zMiddle': 1.0,
     'xMax': 1.5,
