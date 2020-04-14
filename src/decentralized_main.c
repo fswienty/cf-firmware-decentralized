@@ -271,19 +271,6 @@ static void setHoverSetpoint(setpoint_t *sp, float x, float y, float z)
   sp->attitude.yaw = 0;
 }
 
-static void setVelocitySetpoint(setpoint_t *sp, Vector3 vel)
-{
-  sp->mode.x = modeVelocity;
-  sp->mode.y = modeVelocity;
-  sp->mode.z = modeVelocity;
-  sp->mode.yaw = modeAbs;
-
-  sp->position.x = vel.x;
-  sp->position.y = vel.y;
-  sp->position.z = vel.z;
-  sp->attitude.yaw = 0;
-}
-
 static void shutOffEngines(setpoint_t *sp)
 {
   sp->mode.x = modeDisable;
@@ -487,10 +474,13 @@ void appMain()
     {
       case simpleAvoid:
         communicate();
-        // Vector3 moveVector = add(packetData.pos, getSimpleAvoidVector(&isInAvoidRange));
+        // Vector3 moveVector = getTargetVector();
+        // moveVector = add(moveVector, getAvoidVector(&isInAvoidRange));
+        // moveVector = clamp(moveVector, maxLength);
+        // moveVector = add(moveVector, packetData.pos);
+        Vector3 moveVector = add(packetData.pos, getSimpleAvoidVector(&isInAvoidRange));
         // consolePrintf("%d: x=%.2f y=%.2f z=%.2f \n", packetData.id, (double)moveVector.x, (double)moveVector.y, (double)moveVector.z);
-        // setHoverSetpoint(&setpoint, moveVector.x, moveVector.y, moveVector.z);
-        setVelocitySetpoint(&setpoint, getSimpleAvoidVector(&isInAvoidRange));
+        setHoverSetpoint(&setpoint, moveVector.x, moveVector.y, moveVector.z);
 
         ledIndicateDetection(isInAvoidRange);
         if (isLanding && packetData.pos.z < 0.15f)
@@ -501,9 +491,8 @@ void appMain()
         break;
       case flock:
         communicate();
-        // Vector3 moveVector = add(packetData.pos, getFlockVector(&isInAvoidRange));
-        // setHoverSetpoint(&setpoint, moveVector.x, moveVector.y, moveVector.z);
-        setVelocitySetpoint(&setpoint, getFlockVector(&isInAvoidRange));
+        Vector3 moveVector = add(packetData.pos, getFlockVector(&isInAvoidRange));
+        setHoverSetpoint(&setpoint, moveVector.x, moveVector.y, moveVector.z);
 
         ledIndicateDetection(isInAvoidRange);
         if (isLanding && packetData.pos.z < 0.15f)
