@@ -24,13 +24,13 @@ uris = [
 ]
 
 initData = {
-    'mode': 0,
-    'forceFalloff': 1.0,
+    'mode': 0,  # 0 for force based coll avoidance, 1 for boids
+    'forceFalloff': 1.0,  # force based coll avoidance parameters
     'targetForce': 0.3,
     'avoidRange': 0.9,
     'avoidForce': 0.8,
     'maxLength': 0.2,
-    'accBudget': 0.3,
+    'accBudget': 0.3,  # boids parameters
     'zMiddle': 1.0,
     'xMax': 1.5,
     'yMax': 1.0,
