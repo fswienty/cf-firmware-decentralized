@@ -119,7 +119,7 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
 
   if (outsidedness > 0)
   {
-    wallAvoidVector = sub(packetData.pos, (Vector3){0, 0, zMiddle});
+    wallAvoidVector = sub(packetData.pos, (Vector3){0, 0, zMiddle});  // maybe replace zMiddle with the current height of the drone?
     wallAvoidVector = norm(wallAvoidVector);
     wallAvoidVector = mul(wallAvoidVector, outsidedness);
   }
