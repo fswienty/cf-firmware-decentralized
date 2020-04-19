@@ -106,14 +106,17 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
 
   // WALL AVOIDANCE
   Vector3 wallAvoidVector = (Vector3){0, 0, 0};
-  float outsidedness = 0;
-  if (packetData.pos.x > xMax) outsidedness += abs(packetData.pos.x - xMax);
-  if (packetData.pos.x < -xMax) outsidedness += abs(packetData.pos.x + xMax);
-  if (packetData.pos.y > yMax) outsidedness += abs(packetData.pos.y - yMax);
-  if (packetData.pos.y < -yMax) outsidedness += abs(packetData.pos.y + yMax);
-  if (packetData.pos.z > (zMiddle + zMax)) outsidedness += abs(packetData.pos.z - (zMiddle + zMax));
-  if (packetData.pos.z < (zMiddle - zMax)) outsidedness += abs(packetData.pos.z - (zMiddle - zMax));
-  
+  float outsidednessX = 0;
+  float outsidednessY = 0;
+  if (packetData.pos.x > xMax) outsidednessX += abs(packetData.pos.x - xMax);
+  if (packetData.pos.x < -xMax) outsidednessX += abs(packetData.pos.x + xMax);
+  if (packetData.pos.y > yMax) outsidednessY += abs(packetData.pos.y - yMax);
+  if (packetData.pos.y < -yMax) outsidednessY += abs(packetData.pos.y + yMax);
+  // if (packetData.pos.z > (zMiddle + zMax)) outsidedness += abs(packetData.pos.z - (zMiddle + zMax));  // enable to make drones avoid the ceiling
+  // if (packetData.pos.z < (zMiddle - zMax)) outsidedness += abs(packetData.pos.z - (zMiddle - zMax));  // enable to make drones avoid the floor
+
+  float outsidedness = outsidednessX > outsidednessY ? outsidednessX : outsidednessY;
+
   if (outsidedness > 0)
   {
     wallAvoidVector = sub(packetData.pos, (Vector3){0, 0, zMiddle});
