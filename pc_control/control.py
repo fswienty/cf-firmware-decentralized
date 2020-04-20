@@ -25,7 +25,7 @@ uris = [
 
 initData = {
     'mode': 0,  # 0 for force based coll avoidance, 1 for boids
-    'forceFalloff': 1.0,  # force based coll avoidance parameters
+    'forceFalloff': 1.0,  # force based collision avoidance parameters
     'targetForce': 0.3,
     'avoidRange': 0.9,
     'avoidForce': 0.8,
@@ -38,11 +38,11 @@ initData = {
     'wWallAvoid': 1.0,
     'wSeparation': 1.0,
     'sepRange': 0.8,
-    'wAlignment': 1.0,
-    'alignRange': 1.0,
-    'wCohesion': 1.0,
-    'cohesRange': 1.0,
-    'wTargetSeek': 1.0,
+    'wAlignment': 0.2,
+    'alignRange': 1.5,
+    'wCohesion': 0.2,
+    'cohesRange': 2.0,
+    'wTargetSeek': 0.3,
 }
 
 

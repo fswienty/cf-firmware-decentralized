@@ -115,7 +115,8 @@ static Vector3 getFlockVector(bool *isInAvoidRange)
   // if (packetData.pos.z > (zMiddle + zMax)) outsidedness += abs(packetData.pos.z - (zMiddle + zMax));  // enable to make drones avoid the ceiling
   // if (packetData.pos.z < (zMiddle - zMax)) outsidedness += abs(packetData.pos.z - (zMiddle - zMax));  // enable to make drones avoid the floor
 
-  float outsidedness = outsidednessX > outsidednessY ? outsidednessX : outsidednessY;
+  // float outsidedness = outsidednessX > outsidednessY ? outsidednessX : outsidednessY;
+  float outsidedness = sqrtf(outsidednessX * outsidednessX + outsidednessY * outsidednessY);
 
   if (outsidedness > 0)
   {
